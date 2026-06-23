@@ -1,0 +1,5 @@
+{
+  "name": "Similar Study Question Finder",
+  "description": "A tool for students to ask study questions, automatically tags topics with AI, and finds similar past questions with vector embeddings.",
+  "requestFramePermissions": []
+}

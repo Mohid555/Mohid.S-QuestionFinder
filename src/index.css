@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+  margin: 0;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #f8fafc; /* Slate-50 alternative */
+  color: #0f172a; /* Slate-900 */
+}
+
+.presentation-card {
+  animation: presentation-card-in 700ms ease-out both;
+}
+
+.presentation-icon {
+  animation: presentation-icon-float 2400ms ease-in-out infinite;
+}
+
+.presentation-cta {
+  position: relative;
+  overflow: hidden;
+}
+
+.presentation-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-110%);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.28), transparent);
+  animation: presentation-button-shine 2600ms ease-in-out infinite;
+}
+
+.presentation-cta > * {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes presentation-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes presentation-icon-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes presentation-button-shine {
+  0%,
+  45% {
+    transform: translateX(-110%);
+  }
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+/* Custom transitions and scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Smooth scrolling for all scroll containers */
+* {
+  scroll-behavior: smooth;
+}
+
+/* Ensure scrollable panels have breathing room at the bottom */
+.overflow-y-auto {
+  padding-bottom: 1rem;
+}
+
+/* Dark panel scrollbar variant */
+.bg-slate-900 ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+.bg-slate-900 ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
