@@ -87,7 +87,9 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
   }, []);
 
   React.useEffect(() => {
-    if (!result) return;
+    if (!result || loading) return;
+
+    let animationFrameId = 0;
 
     const timeoutId = window.setTimeout(() => {
       const target = resultsRef.current;
@@ -103,27 +105,32 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
 
       const startTop = window.scrollY;
       const distance = targetTop - startTop;
-      const duration = 1100;
+      if (Math.abs(distance) < 8) return;
+
+      const duration = Math.min(1800, Math.max(1200, Math.abs(distance) * 2.2));
       const startTime = performance.now();
 
-      const easeInOutCubic = (t: number) =>
-        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      const easeInOutQuint = (t: number) =>
+        t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
 
       const step = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        window.scrollTo(0, startTop + distance * easeInOutCubic(progress));
+        window.scrollTo(0, startTop + distance * easeInOutQuint(progress));
 
         if (progress < 1) {
-          window.requestAnimationFrame(step);
+          animationFrameId = window.requestAnimationFrame(step);
         }
       };
 
-      window.requestAnimationFrame(step);
-    }, 120);
+      animationFrameId = window.requestAnimationFrame(step);
+    }, 260);
 
-    return () => window.clearTimeout(timeoutId);
-  }, [result]);
+    return () => {
+      window.clearTimeout(timeoutId);
+      if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+    };
+  }, [loading, result]);
 
   // Rotation of academic messages for loading transparency
   const loaderMessages = [
