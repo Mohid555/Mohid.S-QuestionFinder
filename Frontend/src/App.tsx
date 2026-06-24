@@ -94,7 +94,7 @@ const DEMO_EMAIL = "demo123@gmail.com";
 const DEMO_PASSWORD = "demo123";
 
 export default function App() {
-  const [user, setUser] = useState<SessionUser | null>(() => loadSessionUser());
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [activeTab, setActiveTab] = useState<AppTab>(() => loadActiveTab());
 
   // Login form state
