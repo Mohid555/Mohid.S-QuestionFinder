@@ -49,6 +49,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
   const [questionText, setQuestionText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const resultsRef = React.useRef<HTMLDivElement | null>(null);
   
   // Storing the processed result from the backend
   const [result, setResult] = useState<QuestionResponse | null>(null);
@@ -84,6 +85,17 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     };
     loadData();
   }, []);
+
+  React.useEffect(() => {
+    if (!result) return;
+
+    window.requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+  }, [result]);
 
   // Rotation of academic messages for loading transparency
   const loaderMessages = [
@@ -1019,7 +1031,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
               </div>
             </div>
           ) : (
-          <div className="relative z-10 space-y-4">
+          <div ref={resultsRef} className="relative z-10 space-y-4 scroll-mt-24">
             <div className="flex items-center gap-2 text-slate-400 mb-2">
               <HelpCircle className="w-4 h-4 text-amber-500" />
               <h5 className="text-xs font-bold uppercase tracking-wider">Semantic Match Finder results</h5>
