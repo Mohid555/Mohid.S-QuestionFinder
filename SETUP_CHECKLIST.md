@@ -45,6 +45,7 @@ Use this checklist to quickly set up MongoDB Atlas for the Question Finder app.
 - [ ] Save the file
 
 ### Example .env:
+
 ```env
 MONGODB_URI=mongodb+srv://mohid:mohid123@questionfinder.r6hp7fi.mongodb.net/questionfinder?retryWrites=true&w=majority&appName=QuestionFinder
 MONGODB_DB=questionfinder
@@ -64,6 +65,7 @@ npm install
 ## Phase 7: Test Connection
 
 ### Start Backend Server
+
 ```bash
 npm run server
 ```
@@ -73,6 +75,7 @@ npm run server
 - [ ] You see: **"Total visible submissions in database: 0"**
 
 ### In another terminal, test the API
+
 ```bash
 curl http://localhost:5000/api/health
 ```
@@ -82,6 +85,7 @@ curl http://localhost:5000/api/health
 ## Phase 8: Seed Questions (Optional)
 
 Install Python dependencies:
+
 ```bash
 pip install sentence-transformers datasets scikit-learn numpy pymongo python-dotenv
 ```
@@ -89,6 +93,7 @@ pip install sentence-transformers datasets scikit-learn numpy pymongo python-dot
 - [ ] Python dependencies installed
 
 Run seeding script:
+
 ```bash
 python modal.py
 ```
@@ -100,6 +105,7 @@ python modal.py
 ## Phase 9: Start Frontend
 
 In a new terminal:
+
 ```bash
 npm run dev
 ```
@@ -115,9 +121,10 @@ npm run dev
 - [ ] See similar questions appear
 - [ ] Verify in MongoDB Atlas that new submission was saved
 
-## ✨ Success! 
+## ✨ Success!
 
 All systems operational:
+
 - ✅ Frontend running on port 5173
 - ✅ Backend running on port 5000
 - ✅ MongoDB Atlas connected and synced
@@ -126,17 +133,20 @@ All systems operational:
 ## 🐛 Troubleshooting
 
 ### Backend won't connect to MongoDB
+
 - [ ] Check `.env` file has correct credentials (no `<>` brackets)
 - [ ] Verify network access allows your IP in MongoDB Atlas
 - [ ] Try restarting backend server
 - [ ] Check internet connectivity
 
 ### Python script fails
+
 - [ ] Install dependencies: `pip install -r requirements.txt`
 - [ ] Check `.env` exists in project root
 - [ ] Verify MONGODB_URI is valid
 
 ### Frontend can't reach backend
+
 - [ ] Check backend is running on port 5000
 - [ ] Try accessing http://localhost:5000/api/health
 - [ ] Check browser console for CORS errors

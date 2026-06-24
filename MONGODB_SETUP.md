@@ -5,6 +5,7 @@ This project is now configured to use **MongoDB Atlas** for storing and retrievi
 ## What is MongoDB Atlas?
 
 MongoDB Atlas is a fully managed cloud database service by MongoDB. It provides:
+
 - **Free tier**: Up to 512MB storage for development
 - **Automatic scaling**: Grows with your data
 - **Global availability**: Deploy in multiple regions
@@ -79,11 +80,13 @@ pip install sentence-transformers datasets scikit-learn numpy pymongo python-dot
 ## Step 8: Test the Connection
 
 ### Backend Server
+
 ```bash
 npm run server
 ```
 
 Look for output like:
+
 ```
 Connected to MongoDB Atlas.
 Database verified.
@@ -91,6 +94,7 @@ Database verified.
 ```
 
 ### Frontend & Data Seeding
+
 ```bash
 # Terminal 1: Start backend
 npm run server
@@ -100,6 +104,7 @@ python modal.py
 ```
 
 The Python script will:
+
 1. Load 10,000 study questions
 2. Generate embeddings
 3. Save to MongoDB Atlas automatically
@@ -112,11 +117,13 @@ The Python script will:
 #### Collections:
 
 **1. `questions` (Seed data)**
+
 - Stores 10,000+ pre-loaded study questions
 - Fields: `id`, `text`, `tag`, `createdAt`, `searchText`, `similarQuestions`
 - Source: `"seed-data"` (Python script)
 
 **2. `submissions` (User submissions)**
+
 - Stores questions submitted by users through the UI
 - Same fields as `questions`
 - Source: `"user-submission"` (Frontend)
@@ -126,19 +133,25 @@ Both collections are queried together by the backend to provide comprehensive se
 ## API Endpoints
 
 ### GET `/api/health`
+
 Test if the backend is running
+
 ```bash
 curl http://localhost:5000/api/health
 ```
 
 ### GET `/api/topics`
+
 Get all available question categories
+
 ```bash
 curl http://localhost:5000/api/topics
 ```
 
 ### POST `/api/questions/search`
+
 Search for similar questions
+
 ```bash
 curl -X POST http://localhost:5000/api/questions/search \
   -H "Content-Type: application/json" \
@@ -146,13 +159,17 @@ curl -X POST http://localhost:5000/api/questions/search \
 ```
 
 ### GET `/api/submissions`
+
 Get all user submissions
+
 ```bash
 curl http://localhost:5000/api/submissions?tag=Biology
 ```
 
 ### GET `/api/stats`
+
 Get statistics about questions
+
 ```bash
 curl http://localhost:5000/api/stats
 ```
@@ -164,6 +181,7 @@ curl http://localhost:5000/api/stats
 **Error**: `Failed to connect to MongoDB Atlas: getaddrinfo ENOTFOUND`
 
 **Solution**:
+
 1. Check internet connectivity
 2. Verify `MONGODB_URI` in `.env` file
 3. Ensure credentials are correct (no special characters that need escaping)
@@ -174,6 +192,7 @@ curl http://localhost:5000/api/stats
 **Error**: `authentication failed` or `Unauthorized`
 
 **Solution**:
+
 1. Verify username and password in `MONGODB_URI`
 2. Re-create the database user with simpler credentials
 3. Make sure password doesn't have special characters that need URL encoding
@@ -183,6 +202,7 @@ curl http://localhost:5000/api/stats
 **Error**: `MongoDB NOT configured — set MONGODB_URI in your .env file`
 
 **Solution**:
+
 1. Replace `<username>` and `<password>` in `.env`
 2. Replace `<cluster-name>` with your actual cluster name
 3. Don't use angle brackets `<>`
@@ -207,16 +227,19 @@ curl http://localhost:5000/api/stats
 ## Scaling & Production
 
 ### Free Tier Limits:
+
 - 512 MB storage
 - Up to 100 concurrent connections
 - No backup (data retained for 7 days)
 
 ### Upgrade When:
+
 - Approaching 512 MB storage
 - Need high availability
 - Want automated backups
 
 ### To Upgrade:
+
 1. Go to **Deployment → Overview**
 2. Click **Upgrade Tier** and select **M2** ($9/month)
 

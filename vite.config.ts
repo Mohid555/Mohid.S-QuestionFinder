@@ -7,9 +7,16 @@ export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
     publicDir: 'backend/public',
+    build: {
+      rollupOptions: {
+        input: {
+          index: 'index.html',
+        },
+      },
+    },
     resolve: {
       alias: {
-        '@': path.resolve(__dirname, '.'),
+        '@': path.resolve(__dirname, 'Frontend'),
       },
     },
     server: {

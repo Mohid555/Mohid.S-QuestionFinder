@@ -8,7 +8,7 @@ Your Question Finder app is ready to deploy to the cloud!
 ✅ MongoDB Atlas works perfectly from cloud servers  
 ✅ Access your app from anywhere  
 ✅ Share with others via URL  
-✅ No local machine needed  
+✅ No local machine needed
 
 ---
 
@@ -17,31 +17,38 @@ Your Question Finder app is ready to deploy to the cloud!
 ### Steps:
 
 1. **Install Railway CLI**
+
    ```bash
    npm install -g @railway/cli
    ```
 
 2. **Login**
+
    ```bash
    railway login
    ```
 
 3. **Initialize**
+
    ```bash
    cd d:\similar-study-question-finder
    railway init
    ```
+
    - Choose: "Create new project"
    - Name: "question-finder"
 
 4. **Add MongoDB Plugin**
+
    ```bash
    railway add
    ```
+
    - Select: MongoDB
    - It auto-generates MONGODB_URI
 
 5. **Deploy**
+
    ```bash
    railway up
    ```
@@ -58,6 +65,7 @@ Your Question Finder app is ready to deploy to the cloud!
 ### Steps:
 
 1. **Push to GitHub**
+
    ```bash
    git init
    git add .
@@ -96,11 +104,13 @@ Your Question Finder app is ready to deploy to the cloud!
 ### Steps:
 
 1. **Install Vercel CLI**
+
    ```bash
    npm install -g vercel
    ```
 
 2. **Deploy**
+
    ```bash
    vercel
    ```
@@ -132,9 +142,10 @@ Your Question Finder app is ready to deploy to the cloud!
 
 **Railway**: `your-project.up.railway.app`  
 **Render**: `question-finder.onrender.com`  
-**Vercel**: `question-finder.vercel.app`  
+**Vercel**: `question-finder.vercel.app`
 
 ### Access it from:
+
 - Browser: `https://your-domain.com`
 - Share link with anyone
 - Use from mobile
@@ -171,6 +182,7 @@ Your frontend will be at: `question-finder.vercel.app`
 ### Update Frontend API Endpoint
 
 Edit `src/main.tsx`:
+
 ```typescript
 const API_URL = "https://your-backend-domain.com";
 ```
@@ -179,22 +191,24 @@ const API_URL = "https://your-backend-domain.com";
 
 ## Full Stack Deployment Summary
 
-| Layer | Platform | URL |
-|-------|----------|-----|
-| Frontend | Vercel | `question-finder.vercel.app` |
-| Backend | Railway/Render | `question-finder.railway.app` |
-| Database | MongoDB Atlas | Cloud (no URL needed) |
+| Layer    | Platform       | URL                           |
+| -------- | -------------- | ----------------------------- |
+| Frontend | Vercel         | `question-finder.vercel.app`  |
+| Backend  | Railway/Render | `question-finder.railway.app` |
+| Database | MongoDB Atlas  | Cloud (no URL needed)         |
 
 ---
 
 ## Recommended Setup
 
-**Easiest**: 
+**Easiest**:
+
 - Backend: **Railway** (auto-configures MongoDB)
 - Frontend: Served from same Railway instance
 - Total time: ~5 minutes
 
 **Production-Ready**:
+
 - Frontend: **Vercel**
 - Backend: **Railway** or **Render**
 - Database: **MongoDB Atlas**

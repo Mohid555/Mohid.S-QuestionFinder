@@ -54,11 +54,13 @@ Collection: "questions" (seed-data)
 ```
 
 **When to run**:
+
 - First time setup
 - Refreshing question dataset
 - Adding new questions
 
 **Command**:
+
 ```bash
 python modal.py
 ```
@@ -143,11 +145,12 @@ Return JSON response with:
 ```
 
 **Indexed fields** (recommended):
+
 ```javascript
-db.questions.createIndex({ "tag": 1 })
-db.questions.createIndex({ "createdAt": -1 })
-db.questions.createIndex({ "source": 1 })
-db.questions.createIndex({ "text": "text", "searchText": "text" })  // Full-text search
+db.questions.createIndex({ tag: 1 });
+db.questions.createIndex({ createdAt: -1 });
+db.questions.createIndex({ source: 1 });
+db.questions.createIndex({ text: "text", searchText: "text" }); // Full-text search
 ```
 
 ### Collection 2: `submissions`
@@ -180,9 +183,11 @@ db.questions.createIndex({ "text": "text", "searchText": "text" })  // Full-text
 ## Backend API Endpoints
 
 ### GET `/api/health`
+
 Check if server is running and MongoDB is connected.
 
 **Response**:
+
 ```json
 {
   "status": "ok",
@@ -191,9 +196,11 @@ Check if server is running and MongoDB is connected.
 ```
 
 ### GET `/api/topics`
+
 Get all question categories from both collections.
 
 **Response**:
+
 ```json
 {
   "topics": ["Biology", "Chemistry", "Physics", "Mathematics", ...]
@@ -201,16 +208,19 @@ Get all question categories from both collections.
 ```
 
 **MongoDB Query**:
+
 ```javascript
-db.questions.distinct("tag")
-db.submissions.distinct("tag")
+db.questions.distinct("tag");
+db.submissions.distinct("tag");
 // Merged and sorted
 ```
 
 ### POST `/api/questions/search`
+
 Search for similar questions and save submission.
 
 **Request**:
+
 ```json
 {
   "question": "What is photosynthesis?",
@@ -219,6 +229,7 @@ Search for similar questions and save submission.
 ```
 
 **Response**:
+
 ```json
 {
   "id": "q-api-1234567890",
@@ -231,13 +242,14 @@ Search for similar questions and save submission.
       "text": "What is photosynthesis?",
       "tag": "Biology",
       "similarity": 0.95
-    },
+    }
     // ... 5 more
   ]
 }
 ```
 
 **Backend Logic**:
+
 1. Classify question topic
 2. Load embeddings and embeddings cache
 3. Query MongoDB for all questions
@@ -248,14 +260,17 @@ Search for similar questions and save submission.
 8. Insert submission into `submissions` collection
 
 ### GET `/api/submissions?tag=Biology`
+
 Get all user submissions (optionally filtered by tag).
 
 **MongoDB Query**:
+
 ```javascript
-db.submissions.find({ tag: "Biology" }).sort({ createdAt: -1 })
+db.submissions.find({ tag: "Biology" }).sort({ createdAt: -1 });
 ```
 
 **Response**:
+
 ```json
 {
   "submissions": [
@@ -273,15 +288,18 @@ db.submissions.find({ tag: "Biology" }).sort({ createdAt: -1 })
 ```
 
 ### GET `/api/questions/list?page=0&limit=50&tag=Biology`
+
 Get paginated list of all questions (seed + submissions).
 
 **MongoDB Query**:
+
 ```javascript
-db.questions.find({ tag: "Biology" })
+db.questions
+  .find({ tag: "Biology" })
   .sort({ createdAt: -1 })
   .skip(0)
   .limit(50)
-  .toArray()
+  .toArray();
 ```
 
 ## Search Algorithm
@@ -291,6 +309,7 @@ db.questions.find({ tag: "Biology" })
 The backend uses **two-tier scoring**:
 
 #### Tier 1: BM25 Text Matching
+
 - Tokenizes question into unigrams, bigrams, trigrams
 - Computes term frequency-inverse document frequency
 - Scores based on:
@@ -299,19 +318,23 @@ The backend uses **two-tier scoring**:
   - Document length normalization (Okapi BM25 formula)
 
 **Parameters**:
+
 - k1 = 1.5 (saturation point)
 - b = 0.75 (length normalization)
 
 #### Tier 2: Topic Bonus
+
 - If topic matches, add +0.08 to score
 - Keeps searches focused on relevant category
 
 #### Fallback Strategies (in order):
+
 1. BM25 if score ≥ 0.05
 2. Substring matching on raw tokens if BM25 fails
 3. Random same-topic questions if all else fails
 
 ### Similarity Score Range
+
 - 0.0 - 0.2: Very weak match
 - 0.2 - 0.5: Moderate relevance
 - 0.5 - 0.8: Good match
@@ -320,6 +343,7 @@ The backend uses **two-tier scoring**:
 ## Data Consistency
 
 ### Write Operations
+
 ```
 User submits question
     ↓
@@ -335,6 +359,7 @@ Response sent to frontend
 ```
 
 ### Read Operations
+
 ```
 Frontend requests search
     ↓
@@ -372,28 +397,33 @@ Returns top 6 results
 ### Sample Queries
 
 **Count all seed questions**:
+
 ```javascript
-db.questions.countDocuments({ source: "seed-data" })
+db.questions.countDocuments({ source: "seed-data" });
 ```
 
 **Count user submissions**:
+
 ```javascript
-db.submissions.countDocuments()
+db.submissions.countDocuments();
 ```
 
 **Find questions by topic**:
+
 ```javascript
-db.questions.find({ tag: "Biology" })
+db.questions.find({ tag: "Biology" });
 ```
 
 **Find most recent submissions**:
+
 ```javascript
-db.submissions.find().sort({ createdAt: -1 }).limit(10)
+db.submissions.find().sort({ createdAt: -1 }).limit(10);
 ```
 
 ## Scaling Considerations
 
 ### Free Tier (M0)
+
 - ✅ 512 MB storage (10,000+ questions)
 - ✅ Good for development & testing
 - ✅ Low traffic apps
@@ -401,12 +431,14 @@ db.submissions.find().sort({ createdAt: -1 }).limit(10)
 - ⚠️ Max 100 connections
 
 ### When to Upgrade (M2+)
+
 - Storage exceeds 512 MB
-- >1000 concurrent searches/hour
+- > 1000 concurrent searches/hour
 - Need automated backups
 - Production deployment
 
 ### Performance Tips
+
 1. **Index frequently queried fields**: `tag`, `source`, `createdAt`
 2. **Paginate results**: Use `limit()` and `skip()`
 3. **Cache BM25 index**: Only rebuild on question count changes
@@ -417,16 +449,19 @@ db.submissions.find().sort({ createdAt: -1 }).limit(10)
 ### MongoDB Connection Errors
 
 **Scenario**: `ECONNREFUSED`
+
 - Check internet connectivity
 - Verify MONGODB_URI in .env
 - Check network access in MongoDB Atlas
 
 **Scenario**: `authentication failed`
+
 - Verify username/password in MONGODB_URI
 - Check database user exists in MongoDB Atlas
 - Ensure password has no special characters
 
 **Scenario**: `timeout`
+
 - Check network access allows your IP
 - Increase `serverSelectionTimeoutMS` in connection options
 - Upgrade cluster tier if overloaded
@@ -434,6 +469,7 @@ db.submissions.find().sort({ createdAt: -1 }).limit(10)
 ### Graceful Fallbacks
 
 If MongoDB is unavailable:
+
 1. Backend falls back to JSON files (local `db-store.json`)
 2. Searches still work on cached data
 3. User submissions are NOT saved
@@ -443,14 +479,14 @@ If MongoDB is unavailable:
 
 ## Quick Reference
 
-| Component | Technology | Purpose |
-|-----------|-----------|---------|
-| Frontend | React 19, TypeScript, Vite | User interface |
-| Backend | Node.js, Express | API server |
-| Database | MongoDB Atlas | Persistent storage |
-| Search | BM25 + Embeddings | Similarity matching |
-| Embeddings | all-MiniLM-L6-v2 | Semantic similarity |
-| Data Pipeline | Python | Seed data loading |
+| Component     | Technology                 | Purpose             |
+| ------------- | -------------------------- | ------------------- |
+| Frontend      | React 19, TypeScript, Vite | User interface      |
+| Backend       | Node.js, Express           | API server          |
+| Database      | MongoDB Atlas              | Persistent storage  |
+| Search        | BM25 + Embeddings          | Similarity matching |
+| Embeddings    | all-MiniLM-L6-v2           | Semantic similarity |
+| Data Pipeline | Python                     | Seed data loading   |
 
 ---
 

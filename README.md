@@ -7,11 +7,13 @@ Question Finder is a React and Node.js project that classifies study questions, 
 ### 1. Setup MongoDB Atlas (Required)
 
 See [MONGODB_SETUP.md](./MONGODB_SETUP.md) for detailed instructions on:
+
 - Creating a free MongoDB Atlas account
 - Connecting your cluster
 - Updating credentials in `.env`
 
 **Quick summary**:
+
 ```env
 # Update .env with your MongoDB Atlas credentials
 MONGODB_URI=mongodb+srv://username:password@cluster-name.mongodb.net/questionfinder?retryWrites=true&w=majority&appName=QuestionFinder
@@ -80,22 +82,22 @@ This loads 10,000 study questions into MongoDB Atlas.
 
 ## 🔗 API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/health` | Server health check |
-| GET | `/api/topics` | Get all question categories |
-| POST | `/api/questions/search` | Search for similar questions |
-| GET | `/api/submissions` | Get all user submissions |
-| GET | `/api/stats` | Get statistics |
+| Method | Endpoint                | Description                  |
+| ------ | ----------------------- | ---------------------------- |
+| GET    | `/api/health`           | Server health check          |
+| GET    | `/api/topics`           | Get all question categories  |
+| POST   | `/api/questions/search` | Search for similar questions |
+| GET    | `/api/submissions`      | Get all user submissions     |
+| GET    | `/api/stats`            | Get statistics               |
 
 ## 🗄️ MongoDB Collections
 
 **Database**: `questionfinder`
 
-| Collection | Purpose | Source |
-|-----------|---------|--------|
-| `questions` | 10,000+ seed questions | Python script (modal.py) |
-| `submissions` | User-submitted questions | Frontend |
+| Collection    | Purpose                  | Source                   |
+| ------------- | ------------------------ | ------------------------ |
+| `questions`   | 10,000+ seed questions   | Python script (modal.py) |
+| `submissions` | User-submitted questions | Frontend                 |
 
 ## ⚙️ Tech Stack
 

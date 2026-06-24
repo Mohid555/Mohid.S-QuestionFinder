@@ -1,6 +1,7 @@
 # MongoDB Atlas SSL Connection Error - Troubleshooting Guide
 
 ## Error Message
+
 ```
 SSL alert number 80: tlsv1 alert internal error
 ```
@@ -14,6 +15,7 @@ This indicates MongoDB Atlas couldn't establish a secure TLS connection with you
 MongoDB Atlas requires your IP address to be in the Network Access whitelist.
 
 **Steps**:
+
 1. Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
 2. Log in to your account
 3. Click your **Cluster** (QuestionFinder)
@@ -32,12 +34,14 @@ MongoDB Atlas requires your IP address to be in the Network Access whitelist.
 Password with special characters needs URL encoding.
 
 **Examples of special characters**:
+
 - `@` → `%40`
 - `#` → `%23`
 - `!` → `%21`
 - `:` → `%3A`
 
 **Check your `.env` file**:
+
 ```env
 # If password is: my@password#123
 # URL encode it as: my%40password%23123
@@ -45,6 +49,7 @@ MONGODB_URI=mongodb+srv://mohid:my%40password%23123@questionfinder.r6hp7fi.mongo
 ```
 
 **Verify**:
+
 - Username: `mohid` (✅ looks good)
 - Password: `mohid123` (✅ no special characters)
 
@@ -55,17 +60,20 @@ MONGODB_URI=mongodb+srv://mohid:my%40password%23123@questionfinder.r6hp7fi.mongo
 Get the **exact** connection string from MongoDB Atlas:
 
 **Steps**:
+
 1. Go to your Cluster **Overview**
 2. Click **Connect** button
 3. Select **Drivers**
 4. Copy the connection string (should start with `mongodb+srv://`)
 5. Replace `<username>` and `<password>` with your actual values
 6. Replace in `.env`:
+
 ```env
 MONGODB_URI=mongodb+srv://username:password@cluster-name.mongodb.net/questionfinder?retryWrites=true&w=majority&appName=QuestionFinder
 ```
 
 **Common mistakes**:
+
 - ❌ `mongodb://` (should be `mongodb+srv://`)
 - ❌ Missing database name `/questionfinder`
 - ❌ Missing connection parameters
@@ -76,11 +84,13 @@ MONGODB_URI=mongodb+srv://username:password@cluster-name.mongodb.net/questionfin
 ### ✅ Fix #4: Check Network/Firewall
 
 1. **Test your internet connection**:
+
    ```bash
    ping google.com
    ```
 
 2. **Check if you can reach MongoDB**:
+
    ```bash
    node -e "require('dns').lookup('questionfinder.r6hp7fi.mongodb.net', (err, addr) => console.log(err || addr))"
    ```
@@ -99,6 +109,7 @@ MONGODB_URI=mongodb+srv://username:password@cluster-name.mongodb.net/questionfin
 Make sure your MongoDB cluster is running:
 
 **Steps**:
+
 1. Go to [MongoDB Atlas Deployments](https://cloud.mongodb.com/v2)
 2. Click your cluster **QuestionFinder**
 3. Look for status (should say "Active")
@@ -132,7 +143,7 @@ import { config } from "dotenv";
 config();
 
 const uri = process.env.MONGODB_URI;
-console.log(`Testing connection to: ${uri.replace(/:[^:]*@/, ':***@')}`);
+console.log(`Testing connection to: ${uri.replace(/:[^:]*@/, ":***@")}`);
 
 const client = new MongoClient(uri, {
   serverSelectionTimeoutMS: 5000,
@@ -142,14 +153,16 @@ const client = new MongoClient(uri, {
   try {
     await client.connect();
     console.log("✅ Connected!");
-    
+
     const admin = client.db("admin");
     const result = await admin.command({ ping: 1 });
     console.log("✅ Ping successful:", result);
-    
-    const collections = await client.db("questionfinder").listCollections().toArray();
+
+    const collections = await client
+      .db("questionfinder")
+      .listCollections()
+      .toArray();
     console.log("✅ Collections:", collections);
-    
   } catch (err) {
     console.error("❌ Error:", err.message);
   } finally {
@@ -159,6 +172,7 @@ const client = new MongoClient(uri, {
 ```
 
 Run it:
+
 ```bash
 node test-mongo.js
 ```
@@ -168,18 +182,22 @@ node test-mongo.js
 ## MongoDB Atlas Dashboard Checks
 
 ### 1. **Verify Cluster Exists**
+
 - Deployments → Your cluster should be listed and **Active**
 
 ### 2. **Verify Database User Exists**
+
 - Security → Database Access
 - Username `mohid` should be listed
 - Status should be ✅
 
 ### 3. **Verify Network Access**
+
 - Security → Network Access
 - Your IP (or 0.0.0.0/0) should be in the list
 
 ### 4. **Check Connection Logs**
+
 - Support → Logs
 - Look for errors related to your connection
 
@@ -204,11 +222,13 @@ node test-mongo.js
 ### Check These Logs
 
 **In MongoDB Atlas Dashboard**:
+
 1. Go to your Cluster
 2. Click **Logs**
 3. Look for connection attempts with errors
 
 **In Your Terminal**:
+
 ```bash
 npm run server
 # Look for error messages with:
@@ -230,6 +250,7 @@ MONGODB_URI=mongodb+srv://mohid:mohid123@questionfinder.r6hp7fi.mongodb.net/ques
 ### Use MongoDB Compass for Testing
 
 Download [MongoDB Compass](https://www.mongodb.com/products/compass):
+
 1. Open Compass
 2. Click **New Connection**
 3. Paste your MONGODB_URI
@@ -241,14 +262,14 @@ Download [MongoDB Compass](https://www.mongodb.com/products/compass):
 
 ## Common Error Messages & Fixes
 
-| Error | Likely Cause | Fix |
-|-------|--------------|-----|
-| `SSL alert internal error` | IP not whitelisted | Add IP to Network Access |
-| `authentication failed` | Wrong credentials | Verify username/password |
-| `ENOTFOUND` | Wrong cluster name | Get correct name from MongoDB Atlas |
-| `ECONNREFUSED` | Network blocked | Check firewall/VPN |
-| `certificate verify failed` | SSL certificate issue | Usually network related |
-| `timed out` | Connection too slow | Check network speed |
+| Error                       | Likely Cause          | Fix                                 |
+| --------------------------- | --------------------- | ----------------------------------- |
+| `SSL alert internal error`  | IP not whitelisted    | Add IP to Network Access            |
+| `authentication failed`     | Wrong credentials     | Verify username/password            |
+| `ENOTFOUND`                 | Wrong cluster name    | Get correct name from MongoDB Atlas |
+| `ECONNREFUSED`              | Network blocked       | Check firewall/VPN                  |
+| `certificate verify failed` | SSL certificate issue | Usually network related             |
+| `timed out`                 | Connection too slow   | Check network speed                 |
 
 ---
 

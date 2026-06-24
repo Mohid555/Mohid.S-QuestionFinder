@@ -31,6 +31,7 @@ node test-mongo-connection.mjs
 ```
 
 This will:
+
 - ✅ Test 1: Validate your connection string
 - ✅ Test 2: Check network connectivity
 - ✅ Test 3: Try connecting with strict SSL (realistic)
@@ -39,17 +40,20 @@ This will:
 ### Reading the Results:
 
 **Result: Test 3 PASSES ✅**
+
 - Your setup is correct!
 - Run `npm run server` again
 - Everything should work
 
 **Result: Test 4 PASSES but Test 3 FAILS ❌**
+
 - Network can reach MongoDB
 - But SSL is being intercepted
 - **Causes**: Windows Firewall, Antivirus, VPN, Corporate Proxy
 - **Solutions**: See section below
 
 **Result: Test 4 FAILS ❌**
+
 - Network Access not properly configured
 - Go back to "Verify Network Access" section above
 - Add `0.0.0.0/0` to whitelist
@@ -65,6 +69,7 @@ If Test 4 passes but Test 3 fails, something is intercepting your SSL:
 ⚠️ **Temporary for testing only** - Re-enable after testing!
 
 **Steps**:
+
 1. Type "Windows Defender Firewall" in Start menu
 2. Click "Windows Defender Firewall with Advanced Security"
 3. Click "Windows Defender Firewall Properties" (left panel)
@@ -80,6 +85,7 @@ If Test 4 passes but Test 3 fails, something is intercepting your SSL:
 ### Fix #2: Disable Antivirus Temporarily
 
 **Common antivirus software**:
+
 - Windows Defender (built-in) - see Fix #1
 - Norton - Disable temporarily
 - McAfee - Disable temporarily
@@ -87,6 +93,7 @@ If Test 4 passes but Test 3 fails, something is intercepting your SSL:
 - Kaspersky - Disable temporarily
 
 **Steps** (varies by software):
+
 1. Find the antivirus in system tray (bottom right)
 2. Right-click → Settings
 3. Look for "Real-time Protection" or "Active Protection"
@@ -98,6 +105,7 @@ If Test 4 passes but Test 3 fails, something is intercepting your SSL:
 ### Fix #3: Disconnect from VPN
 
 If using VPN:
+
 1. Disconnect from VPN
 2. Try connecting: `npm run server`
 3. If it works → VPN was intercepting SSL
@@ -106,6 +114,7 @@ If using VPN:
 ### Fix #4: Bypass Corporate Proxy
 
 If on corporate network:
+
 1. Try from personal WiFi (mobile hotspot) to test
 2. If it works → corporate proxy was the issue
 3. Ask your IT department to whitelist `mongodb.net` and `mongodb.com`
@@ -117,11 +126,13 @@ If on corporate network:
 Verify you can reach MongoDB servers:
 
 **Method 1: PowerShell**
+
 ```powershell
 Test-NetConnection -ComputerName questionfinder.r6hp7fi.mongodb.net -Port 27017 -InformationLevel Detailed
 ```
 
 Expected output:
+
 ```
 ComputerName     : questionfinder.r6hp7fi.mongodb.net
 RemoteAddress    : xxx.xxx.xxx.xxx
@@ -130,6 +141,7 @@ TcpTestSucceeded : True
 ```
 
 **Method 2: DNS Resolution**
+
 ```powershell
 Resolve-DnsName questionfinder.r6hp7fi.mongodb.net
 ```
@@ -147,6 +159,7 @@ MONGODB_URI=mongodb+srv://mohid:mohid123@questionfinder.r6hp7fi.mongodb.net/ques
 ```
 
 ✅ Correct format:
+
 - Protocol: `mongodb+srv://` (NOT `mongodb://`)
 - Username: `mohid` (after `://`)
 - Password: `mohid123` (after first `:`)
@@ -155,6 +168,7 @@ MONGODB_URI=mongodb+srv://mohid:mohid123@questionfinder.r6hp7fi.mongodb.net/ques
 - Parameters: `?retryWrites=true&w=majority&appName=QuestionFinder`
 
 ❌ Common mistakes:
+
 ```env
 # WRONG - using http instead of mongodb
 MONGODB_URI=http://mohid:mohid123@...
@@ -264,6 +278,7 @@ Attempting to connect to MongoDB Atlas...
 ```
 
 And from test script:
+
 ```
 ✅ Strict SSL connection successful!
 ```
