@@ -126,9 +126,9 @@ async function getDatabase() {
       retryWrites: true,
       w: "majority",
       maxPoolSize: 10,
-      serverSelectionTimeoutMS: 30000,  // Longer timeout for SSL negotiation
-      connectTimeoutMS: 30000,
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 10000,
       // Disable certificate verification as a test (temporary troubleshooting only)
       // WARNING: Never use in production!
       tlsAllowInvalidCertificates: true,  // ⚠️ TEMPORARY - for troubleshooting only

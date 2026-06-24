@@ -797,7 +797,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
           body: JSON.stringify({ question: questionText.trim(), userName: "Sir" }),
         });
       } catch {
-        throw new Error("Backend is not running. Open another terminal and run: npm run server");
+        throw new Error("Cannot connect to the question processing API. Keep the backend running with: npm run server");
       }
       const apiResult = await response.json();
 
@@ -810,7 +810,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       onQuestionSubmitted({ ...apiResult, similarQuestions: apiResult.similarQuestions || [] });
       setQuestionText("");
     } catch (err: any) {
-      setError(err.message || "Unable to process question. Make sure the backend is running with npm run server.");
+      setError(err.message || "Unable to process question. Please check the backend server and try again.");
     } finally {
       clearInterval(interval);
       setLoading(false);
