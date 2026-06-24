@@ -718,7 +718,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         id: bestQ.id,
         text: bestQ.text,
         tag: bestQ.tag,
-        userName: bestQ.userName || "Academia AI",
+        userName: bestQ.userName || "",
         createdAt: bestQ.createdAt,
         similarity: Math.min(0.96, 0.55 + bestMatch.score * 0.35)
       });
@@ -732,7 +732,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
           id: nq.id,
           text: nq.text,
           tag: nq.tag,
-          userName: nq.userName || "Academia AI",
+          userName: nq.userName || "",
           createdAt: nq.createdAt,
           similarity: neighbor.score
         });
@@ -747,7 +747,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
           id: cq.id,
           text: cq.text,
           tag: cq.tag,
-          userName: cq.userName || "Academia AI",
+          userName: cq.userName || "",
           createdAt: cq.createdAt,
           similarity: Math.min(0.90, 0.42 + topCandidates[k].score * 0.32)
         });
@@ -821,13 +821,13 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     <div className="space-y-6">
       
       {/* Search Submission Panel */}
-      <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-md shadow-slate-50 relative overflow-hidden">
+      <div className="bg-white rounded-3xl p-4 sm:p-8 border border-slate-100 shadow-md shadow-slate-50 relative overflow-hidden">
         
         {/* Background gradient border effect */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-indigo-500 through-indigo-600 via-violet-600 to-amber-400"></div>
 
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+          <div className="flex items-center gap-3 min-w-0">
             <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
               <Sparkles className="w-5 h-5 animate-pulse" />
             </div>
@@ -836,7 +836,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
               <p className="text-xs text-slate-400">Our semantic classification engine will auto-tag and match with prior student data.</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold uppercase tracking-wider">
+          <div className="flex w-fit items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-full text-[10px] font-bold uppercase tracking-wider">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
             <span>System Online</span>
           </div>
@@ -866,7 +866,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
               placeholder="e.g. How does photosynthesis work in plants and what role does sunlight have?"
               disabled={loading}
               rows={4}
-              className="w-full bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-150 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 p-4 rounded-2xl text-sm transition-all outline-none resize-none placeholder:text-slate-400 font-medium"
+              className="w-full bg-slate-50/50 hover:bg-slate-50 focus:bg-white border border-slate-150 hover:border-slate-300 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100/50 p-4 pb-10 rounded-2xl text-sm transition-all outline-none resize-none placeholder:text-slate-400 font-medium"
             />
             <div className="absolute bottom-3 right-3 text-[10px] font-mono text-slate-400 bg-white px-2 py-1 rounded-md border border-slate-100 select-none">
               {questionText.length} chars
@@ -875,7 +875,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
             {/* Suggested prompts list */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full sm:max-w-[70%]">
+            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1 max-w-full sm:max-w-[70%]" data-reset-scroll>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">Ideas:</span>
               <div className="flex gap-1.5 pl-1">
                 {SUGGESTED_IDEAS.map((idea, idx) => (
@@ -896,7 +896,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
             <button
               type="submit"
               disabled={loading || questionText.trim().length === 0}
-              className="bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-3 px-6 rounded-xl text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-100 flex-shrink-0"
+              className="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 disabled:bg-slate-200 disabled:text-slate-400 text-white font-semibold py-3 px-6 rounded-xl text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-indigo-100 flex-shrink-0"
             >
               {loading ? (
                 <>
@@ -915,20 +915,43 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
 
         {/* Dynamic loading screen */}
         {loading && (
-          <div className="absolute inset-0 bg-white/95 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-8 animate-fade-in">
-            <div className="p-4 bg-indigo-50 text-indigo-600 rounded-3xl mb-4 relative">
-              <Loader2 className="w-8 h-8 animate-spin" />
-              <div className="absolute inset-0 bg-indigo-100/30 rounded-3xl animate-ping opacity-40"></div>
-            </div>
-            <h4 className="text-base font-bold text-slate-800 tracking-tight">AI Assessment in Progress</h4>
-            <p className="text-xs text-slate-400 font-mono mt-1.5 tracking-tight animate-pulse text-center">
-              {loaderMessages[loadingStep]}
-            </p>
-            <div className="w-48 bg-slate-100 h-1 rounded-full overflow-hidden mt-5">
-              <div 
-                className="bg-indigo-650 h-full rounded-full transition-all duration-1000"
-                style={{ width: `${((loadingStep + 1) / loaderMessages.length) * 100}%` }}
-              ></div>
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center overflow-hidden bg-white/95 p-6 text-center backdrop-blur-sm animate-fade-in sm:p-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(79,70,229,0.10),transparent_42%)]"></div>
+
+            <div className="relative flex flex-col items-center">
+              <div className="assessment-loader" aria-hidden="true">
+                <div className="assessment-loader-ring"></div>
+                <div className="assessment-loader-core">
+                  <Sparkles className="h-7 w-7 text-indigo-600" />
+                </div>
+              </div>
+
+              <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-indigo-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 assessment-ping"></span>
+                Processing request
+              </div>
+
+              <p className="mt-5 min-h-5 max-w-sm text-center font-mono text-xs font-semibold text-slate-400 sm:text-sm">
+                {loaderMessages[loadingStep]}
+              </p>
+
+              <div className="mt-5 flex items-center gap-2">
+                {loaderMessages.map((message, index) => (
+                  <span
+                    key={message}
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      index <= loadingStep ? "w-7 bg-indigo-600" : "w-2 bg-slate-200"
+                    }`}
+                  ></span>
+                ))}
+              </div>
+
+              <div className="mt-5 h-1.5 w-56 overflow-hidden rounded-full bg-slate-100 sm:w-64">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-400 transition-all duration-700"
+                  style={{ width: `${((loadingStep + 1) / loaderMessages.length) * 100}%` }}
+                ></div>
+              </div>
             </div>
           </div>
         )}
@@ -937,7 +960,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
 
       {/* Processed Results Page (Shows ONLY when a question has been analyzed) */}
       {result && (
-        <div className="bg-slate-900 text-slate-100 rounded-3xl p-6 sm:p-8 border border-slate-800/65 shadow-xl shadow-slate-950/20 animate-fade-in relative overflow-hidden">
+        <div className="bg-slate-900 text-slate-100 rounded-3xl p-4 sm:p-8 border border-slate-800/65 shadow-xl shadow-slate-950/20 animate-fade-in relative overflow-hidden">
           
           <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-600/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
 
@@ -949,17 +972,17 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
                 <span>{result.tag === "Not in trained syllabus" ? "Topic Not Recognized" : "Question Categorized"}</span>
               </div>
               <h4 className="text-sm font-semibold text-slate-400 mt-2">Analyzed Inquiry</h4>
-              <p className="text-base font-bold text-white mt-1 leading-relaxed italic">
+              <p className="text-sm sm:text-base font-bold text-white mt-1 leading-relaxed italic break-words">
                 “{result.text}”
               </p>
             </div>
 
             <div className="flex-shrink-0 self-start sm:self-center">
-              <div className={`px-4 py-2 rounded-2xl border text-sm font-bold tracking-tight inline-flex items-center gap-2 ${
+              <div className={`max-w-full px-4 py-2 rounded-2xl border text-sm font-bold tracking-tight inline-flex items-center gap-2 ${
                 TOPIC_THEMES[result.tag] ? `${TOPIC_THEMES[result.tag].bg} ${TOPIC_THEMES[result.tag].text} ${TOPIC_THEMES[result.tag].border}` : "bg-indigo-950 text-indigo-300 border-indigo-900/50"
               }`}>
                 <Compass className="w-4 h-4" />
-                <span>{result.tag}</span>
+                <span className="truncate">{result.tag}</span>
               </div>
             </div>
           </div>
@@ -967,7 +990,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
           {/* Semantic Similarity Section */}
           {result.tag === "Not in trained syllabus" ? (
             <div className="relative z-10">
-              <div className="p-8 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-center">
+              <div className="p-5 sm:p-8 bg-amber-500/5 border border-amber-500/20 rounded-2xl text-center">
                 <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-500/10 mb-4">
                   <AlertCircle className="w-7 h-7 text-amber-400" />
                 </div>
@@ -986,10 +1009,10 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
                   Try rephrasing your question with specific academic terminology for better results.
                 </p>
               </div>
-              <div className="pt-4 flex justify-end">
+              <div className="pt-4 flex justify-stretch sm:justify-end">
                 <button
-                  onClick={() => { setResult(null); onResultChange?.(false); }}
-                  className="text-xs bg-slate-850 hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all font-semibold border border-slate-805 cursor-pointer"
+                  onClick={() => { setResult(null); onResultChange?.(false); setQuestionText(""); }}
+                  className="w-full sm:w-auto text-xs bg-slate-850 hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all font-semibold border border-slate-805 cursor-pointer"
                 >
                   Clear Screen & Ask Another
                 </button>
@@ -1030,8 +1053,8 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
                       key={match.id}
                       className={`p-4 bg-gradient-to-r rounded-2xl border flex flex-col justify-between gap-3 shadow-md transition-all ${colorClass}`}
                     >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="text-sm leading-relaxed text-slate-100 font-medium">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4">
+                        <div className="text-sm leading-relaxed text-slate-100 font-medium break-words">
                           “{match.text}”
                         </div>
                         <div className="flex flex-col items-end">
@@ -1041,14 +1064,11 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-white/5 pt-2.5 text-[11px] text-slate-400 font-normal">
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-slate-300">{match.userName}</span>
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-2.5 text-[11px] text-slate-400 font-normal">
+                        <div className="match-subject-only flex flex-wrap items-center gap-1.5">
+                          <span className="font-semibold text-slate-300">{match.tag}</span>
                           <span>•</span>
-                          <span>{match.tag}</span>
-                        </div>
-                        <div>
-                          {new Date(match.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                          
                         </div>
                       </div>
                     </div>
@@ -1057,10 +1077,10 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
               </div>
             )}
             
-            <div className="pt-2 flex justify-end">
+            <div className="pt-2 flex justify-stretch sm:justify-end">
               <button
-                onClick={() => { setResult(null); onResultChange?.(false); }}
-                className="text-xs bg-slate-850 hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all font-semibold border border-slate-805 cursor-pointer"
+                onClick={() => { setResult(null); onResultChange?.(false); setQuestionText(""); }}
+                className="w-full sm:w-auto text-xs bg-slate-850 hover:bg-slate-800 hover:text-white px-4 py-2 rounded-xl transition-all font-semibold border border-slate-805 cursor-pointer"
               >
                 Clear Screen & Ask Another
               </button>
