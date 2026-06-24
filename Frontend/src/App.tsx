@@ -23,63 +23,8 @@ interface QuestionItem {
 }
 
 const PAGE_SIZE = 15;
-const SESSION_USER_KEY = "qs_session_user";
-const SESSION_ACTIVE_TAB_KEY = "qs_active_tab";
 
 type SessionUser = { id: string; email: string; name: string };
-
-function loadSessionUser() {
-  try {
-    const raw = localStorage.getItem(SESSION_USER_KEY) || sessionStorage.getItem(SESSION_USER_KEY);
-    if (!raw) return null;
-
-    const parsed = JSON.parse(raw);
-    if (
-      parsed &&
-      typeof parsed.id === "string" &&
-      typeof parsed.email === "string" &&
-      typeof parsed.name === "string"
-    ) {
-      return parsed as SessionUser;
-    }
-  } catch {}
-  return null;
-}
-
-function saveSessionUser(u: SessionUser | null) {
-  try {
-    if (u) {
-      const serialized = JSON.stringify(u);
-      localStorage.setItem(SESSION_USER_KEY, serialized);
-      sessionStorage.setItem(SESSION_USER_KEY, serialized);
-    } else {
-      localStorage.removeItem(SESSION_USER_KEY);
-      sessionStorage.removeItem(SESSION_USER_KEY);
-    }
-  } catch {}
-}
-
-function loadActiveTab(): AppTab {
-  try {
-    const savedTab = localStorage.getItem(SESSION_ACTIVE_TAB_KEY) || sessionStorage.getItem(SESSION_ACTIVE_TAB_KEY);
-    if (savedTab === "dashboard" || savedTab === "history" || savedTab === "stats") {
-      return savedTab;
-    }
-  } catch {}
-  return "dashboard";
-}
-
-function saveActiveTab(tab: AppTab | null) {
-  try {
-    if (tab) {
-      localStorage.setItem(SESSION_ACTIVE_TAB_KEY, tab);
-      sessionStorage.setItem(SESSION_ACTIVE_TAB_KEY, tab);
-    } else {
-      localStorage.removeItem(SESSION_ACTIVE_TAB_KEY);
-      sessionStorage.removeItem(SESSION_ACTIVE_TAB_KEY);
-    }
-  } catch {}
-}
 
 function toDateKey(value: string) {
   const date = new Date(value);
@@ -92,10 +37,39 @@ function toDateKey(value: string) {
 
 const DEMO_EMAIL = "demo123@gmail.com";
 const DEMO_PASSWORD = "demo123";
+const DEFAULT_USER: SessionUser = {
+  id: "demo-session",
+  email: "mohammedmohid810@gmail.com",
+  name: "Sir",
+};
+
+function getRouteFromHash() {
+  const hash = window.location.hash.replace(/^#\/?/, "").toLowerCase();
+  if (hash === "dashboard" || hash === "history" || hash === "stats") {
+    return { user: DEFAULT_USER, activeTab: hash as AppTab };
+  }
+
+  return { user: null, activeTab: "dashboard" as AppTab };
+}
+
+function isPageRefresh() {
+  return performance.getEntriesByType("navigation").some((entry) => {
+    return entry instanceof PerformanceNavigationTiming && entry.type === "reload";
+  });
+}
+
+function setHashRoute(route: "login" | AppTab) {
+  const nextHash = `#/${route}`;
+  if (window.location.hash !== nextHash) {
+    window.location.hash = nextHash;
+  }
+}
 
 export default function App() {
-  const [user, setUser] = useState<SessionUser | null>(null);
-  const [activeTab, setActiveTab] = useState<AppTab>(() => loadActiveTab());
+  const shouldRestoreRoute = isPageRefresh();
+  const initialRoute = shouldRestoreRoute ? getRouteFromHash() : { user: null, activeTab: "dashboard" as AppTab };
+  const [user, setUser] = useState<SessionUser | null>(() => initialRoute.user);
+  const [activeTab, setActiveTabState] = useState<AppTab>(() => initialRoute.activeTab);
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -122,6 +96,11 @@ export default function App() {
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historySubjectFilter, setHistorySubjectFilter] = useState("all");
   const [historyDateFilter, setHistoryDateFilter] = useState("");
+
+  const setActiveTab = (tab: AppTab) => {
+    setActiveTabState(tab);
+    if (user) setHashRoute(tab);
+  };
 
   // Load submitted questions from MongoDB in real time
   useEffect(() => {
@@ -184,17 +163,24 @@ export default function App() {
   }, [activeTab]);
 
   useEffect(() => {
-    if (user) saveActiveTab(activeTab);
-  }, [activeTab, user]);
+    const handleHashChange = () => {
+      const route = getRouteFromHash();
+      setUser(route.user);
+      setActiveTabState(route.activeTab);
+    };
+
+    if (!shouldRestoreRoute || !window.location.hash) {
+      window.history.replaceState(null, "", "#/login");
+    }
+
+    window.addEventListener("hashchange", handleHashChange);
+    return () => window.removeEventListener("hashchange", handleHashChange);
+  }, [shouldRestoreRoute]);
 
   const handleStartSession = () => {
-    const newUser = {
-      id: "sess-" + Math.random().toString(36).slice(2, 9),
-      email: "mohammedmohid810@gmail.com",
-      name: "Sir",
-    };
-    setUser(newUser);
-    saveSessionUser(newUser);
+    setUser(DEFAULT_USER);
+    setActiveTabState("dashboard");
+    setHashRoute("dashboard");
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -246,7 +232,8 @@ export default function App() {
       name: signupName.trim(),
     };
     setUser(newUser);
-    saveSessionUser(newUser);
+    setActiveTabState("dashboard");
+    setHashRoute("dashboard");
   };
 
   const handleNewQuestion = (newQ: QuestionItem) => {
@@ -259,14 +246,13 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    saveSessionUser(null);
-    saveActiveTab(null);
     setUser(null);
     setHistory([]);
     setSelectedTag(null);
-    setActiveTab("dashboard");
+    setActiveTabState("dashboard");
     setArchivePage(0);
     setHasResult(false);
+    setHashRoute("login");
   };
 
   // Tag counts from session questions only
