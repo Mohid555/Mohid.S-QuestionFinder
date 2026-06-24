@@ -96,30 +96,39 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       if (!target) return;
 
       const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-      const targetTop = target.getBoundingClientRect().top + window.scrollY - 96;
+      const scroller = document.scrollingElement || document.documentElement;
+      const previousScrollBehavior = document.documentElement.style.scrollBehavior;
+      const targetTop = target.getBoundingClientRect().top + scroller.scrollTop - 104;
 
       if (prefersReducedMotion) {
         window.scrollTo({ top: targetTop });
+        target.classList.add("results-arrival-pulse");
+        window.setTimeout(() => target.classList.remove("results-arrival-pulse"), 1400);
         return;
       }
 
-      const startTop = window.scrollY;
+      document.documentElement.style.scrollBehavior = "auto";
+
+      const startTop = scroller.scrollTop;
       const distance = targetTop - startTop;
       if (Math.abs(distance) < 8) return;
 
-      const duration = Math.min(1800, Math.max(1200, Math.abs(distance) * 2.2));
+      const duration = Math.min(2400, Math.max(1600, Math.abs(distance) * 3));
       const startTime = performance.now();
 
-      const easeInOutQuint = (t: number) =>
-        t < 0.5 ? 16 * t * t * t * t * t : 1 - Math.pow(-2 * t + 2, 5) / 2;
+      const easeInOutSine = (t: number) => -(Math.cos(Math.PI * t) - 1) / 2;
 
       const step = (now: number) => {
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
-        window.scrollTo(0, startTop + distance * easeInOutQuint(progress));
+        scroller.scrollTop = startTop + distance * easeInOutSine(progress);
 
         if (progress < 1) {
           animationFrameId = window.requestAnimationFrame(step);
+        } else {
+          document.documentElement.style.scrollBehavior = previousScrollBehavior;
+          target.classList.add("results-arrival-pulse");
+          window.setTimeout(() => target.classList.remove("results-arrival-pulse"), 1400);
         }
       };
 
@@ -129,6 +138,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     return () => {
       window.clearTimeout(timeoutId);
       if (animationFrameId) window.cancelAnimationFrame(animationFrameId);
+      document.documentElement.style.scrollBehavior = "";
     };
   }, [loading, result]);
 

@@ -161,6 +161,10 @@ body {
   display: none;
 }
 
+.results-arrival-pulse {
+  animation: results-arrival-pulse 1400ms ease-out both;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -268,6 +272,21 @@ body {
   50% {
     opacity: 1;
     transform: scale(1.15);
+  }
+}
+
+@keyframes results-arrival-pulse {
+  0% {
+    filter: brightness(1);
+    transform: translateY(0);
+  }
+  28% {
+    filter: brightness(1.22);
+    transform: translateY(-3px);
+  }
+  100% {
+    filter: brightness(1);
+    transform: translateY(0);
   }
 }
 
