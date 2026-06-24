@@ -24,19 +24,60 @@ interface QuestionItem {
 
 const PAGE_SIZE = 15;
 const SESSION_USER_KEY = "qs_session_user";
+const SESSION_ACTIVE_TAB_KEY = "qs_active_tab";
+
+type SessionUser = { id: string; email: string; name: string };
 
 function loadSessionUser() {
   try {
-    const raw = sessionStorage.getItem(SESSION_USER_KEY);
-    if (raw) return JSON.parse(raw);
+    const raw = localStorage.getItem(SESSION_USER_KEY) || sessionStorage.getItem(SESSION_USER_KEY);
+    if (!raw) return null;
+
+    const parsed = JSON.parse(raw);
+    if (
+      parsed &&
+      typeof parsed.id === "string" &&
+      typeof parsed.email === "string" &&
+      typeof parsed.name === "string"
+    ) {
+      return parsed as SessionUser;
+    }
   } catch {}
   return null;
 }
 
-function saveSessionUser(u: { id: string; email: string; name: string } | null) {
+function saveSessionUser(u: SessionUser | null) {
   try {
-    if (u) sessionStorage.setItem(SESSION_USER_KEY, JSON.stringify(u));
-    else sessionStorage.removeItem(SESSION_USER_KEY);
+    if (u) {
+      const serialized = JSON.stringify(u);
+      localStorage.setItem(SESSION_USER_KEY, serialized);
+      sessionStorage.setItem(SESSION_USER_KEY, serialized);
+    } else {
+      localStorage.removeItem(SESSION_USER_KEY);
+      sessionStorage.removeItem(SESSION_USER_KEY);
+    }
+  } catch {}
+}
+
+function loadActiveTab(): AppTab {
+  try {
+    const savedTab = localStorage.getItem(SESSION_ACTIVE_TAB_KEY) || sessionStorage.getItem(SESSION_ACTIVE_TAB_KEY);
+    if (savedTab === "dashboard" || savedTab === "history" || savedTab === "stats") {
+      return savedTab;
+    }
+  } catch {}
+  return "dashboard";
+}
+
+function saveActiveTab(tab: AppTab | null) {
+  try {
+    if (tab) {
+      localStorage.setItem(SESSION_ACTIVE_TAB_KEY, tab);
+      sessionStorage.setItem(SESSION_ACTIVE_TAB_KEY, tab);
+    } else {
+      localStorage.removeItem(SESSION_ACTIVE_TAB_KEY);
+      sessionStorage.removeItem(SESSION_ACTIVE_TAB_KEY);
+    }
   } catch {}
 }
 
@@ -53,8 +94,8 @@ const DEMO_EMAIL = "demo123@gmail.com";
 const DEMO_PASSWORD = "demo123";
 
 export default function App() {
-  const [user, setUser] = useState<{ id: string; email: string; name: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<AppTab>("dashboard");
+  const [user, setUser] = useState<SessionUser | null>(() => loadSessionUser());
+  const [activeTab, setActiveTab] = useState<AppTab>(() => loadActiveTab());
 
   // Login form state
   const [loginEmail, setLoginEmail] = useState("");
@@ -142,6 +183,10 @@ export default function App() {
     });
   }, [activeTab]);
 
+  useEffect(() => {
+    if (user) saveActiveTab(activeTab);
+  }, [activeTab, user]);
+
   const handleStartSession = () => {
     const newUser = {
       id: "sess-" + Math.random().toString(36).slice(2, 9),
@@ -214,7 +259,8 @@ export default function App() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem(SESSION_USER_KEY);
+    saveSessionUser(null);
+    saveActiveTab(null);
     setUser(null);
     setHistory([]);
     setSelectedTag(null);
@@ -719,7 +765,6 @@ export default function App() {
                                     </p>
                                   </div>
                                   <div className="pt-3 border-t border-slate-100 flex flex-wrap justify-between items-center gap-2 text-[10px] text-slate-400 font-mono">
-                                    <span className="font-semibold text-slate-500">{item.userName || "Anonymous"}</span>
                                     <span>{new Date(item.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                                   </div>
                                 </button>
@@ -901,14 +946,10 @@ export default function App() {
                               "{item.text}"
                             </p>
 
-                            <div className="mt-5 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+                            <div className="mt-5 border-t border-slate-100 pt-4">
                               <div className="rounded-2xl bg-slate-50 px-3 py-2">
                                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Matches</div>
                                 <div className="mt-1 text-sm font-extrabold text-slate-900">{matchCount}</div>
-                              </div>
-                              <div className="rounded-2xl bg-slate-50 px-3 py-2">
-                                <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Submitted by</div>
-                                <div className="mt-1 truncate text-sm font-extrabold text-slate-900">{item.userName || "Anonymous"}</div>
                               </div>
                             </div>
                           </button>
