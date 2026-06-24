@@ -44,7 +44,11 @@ const SUGGESTED_IDEAS = [
   { text: "Who is known as the Father of the Nation in India?", label: "India GK" },
 ];
 
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL =
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
+  window.location.port !== "5000"
+    ? "http://localhost:5000"
+    : "";
 
 export default function QuestionBox({ onQuestionSubmitted, onResultChange }: QuestionBoxProps) {
   const [questionText, setQuestionText] = useState("");
@@ -447,6 +451,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       "repro": "Biology", "fetus": "Biology", "embryo": "Biology",
       "mito": "Biology", "meiosis": "Biology", "mitosis": "Biology",
       "organ": "Biology", "organs": "Biology", "blood": "Biology",
+      "lung": "Biology", "lungs": "Biology",
       "virus": "Biology", "viral": "Biology", "bact": "Biology",
       "evol": "Biology", "darwin": "Biology", "nerve": "Biology",
       "neuro": "Biology", "brain": "Biology", "digest": "Biology",
@@ -810,7 +815,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       onQuestionSubmitted({ ...apiResult, similarQuestions: apiResult.similarQuestions || [] });
       setQuestionText("");
     } catch (err: any) {
-      setError(err.message || "Unable to process question. Make sure the backend is running with node server.js.");
+      setError(err.message || "Unable to process question. Make sure the backend is running with npm run server.");
     } finally {
       clearInterval(interval);
       setLoading(false);

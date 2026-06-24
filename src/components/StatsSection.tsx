@@ -7,6 +7,8 @@ import React, { useEffect, useState } from "react";
 import { BarChart3, Brain, Layers, GitCompare, Sparkles, RefreshCw } from "lucide-react";
 import { TOPIC_THEMES } from "./QuestionBox";
 
+const API_BASE_URL = window.location.port === "5000" ? "" : "http://localhost:5000";
+
 interface StatsSectionProps {
   onRefreshTrigger?: number;
 }
@@ -23,22 +25,17 @@ export default function StatsSection({ onRefreshTrigger }: StatsSectionProps) {
   const fetchStats = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/db-store.json");
+      const res = await fetch(`${API_BASE_URL}/api/stats`);
       const data = await res.json();
-      if (data && Array.isArray(data.questions)) {
-        const tagCounts: Record<string, number> = {};
-        const questions = data.questions;
-        let totalQuestions = questions.length;
-        for (const q of questions) {
-          tagCounts[q.tag] = (tagCounts[q.tag] || 0) + 1;
-        }
-        const topics = Object.keys(tagCounts);
-        setStats({ totalQuestions, tagCounts, topics });
-      } else {
-        setStats({ totalQuestions: 0, tagCounts: {}, topics: [] });
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to fetch statistics");
+      setStats({
+        totalQuestions: Number(data.totalQuestions || 0),
+        tagCounts: data.tagCounts || {},
+        topics: Array.isArray(data.topics) ? data.topics : [],
+      });
     } catch (err) {
       console.error("Failed to fetch statistics", err);
+      setStats({ totalQuestions: 0, tagCounts: {}, topics: [] });
     } finally {
       setLoading(false);
     }

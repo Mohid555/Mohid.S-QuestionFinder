@@ -22,7 +22,7 @@ interface QuestionItem {
 
 const PAGE_SIZE = 15;
 const SESSION_USER_KEY = "qs_session_user";
-const API_BASE_URL = "http://localhost:5000";
+const API_BASE_URL = window.location.port === "5000" ? "" : "http://localhost:5000";
 
 function loadSessionUser() {
   try {
@@ -50,42 +50,50 @@ export default function App() {
   const [archivePage, setArchivePage] = useState(0);
   const [hasResult, setHasResult] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionItem | null>(null);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Sync history to sessionStorage on every change
+  // Load submitted questions from MongoDB in real time
   useEffect(() => {
     if (!user) return;
 
     let isCurrent = true;
-    const loadSubmittedQuestions = async () => {
+    const fetchSubmissions = async () => {
+      setLoadingHistory(true);
       try {
         const response = await fetch(`${API_BASE_URL}/api/submissions`);
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Could not load submitted questions.");
+        if (!response.ok) throw new Error(data.error || "Failed to load.");
 
-        const submissions = Array.isArray(data.submissions) ? data.submissions : [];
-        const submittedQuestions = submissions.map((item: any) => ({
-          id: item.id || item._id,
-          text: item.text,
-          tag: item.tag,
-          createdAt: item.createdAt,
-          similarQuestions: Array.isArray(item.similarQuestions) ? item.similarQuestions : [],
+        const mapped = (Array.isArray(data.submissions) ? data.submissions : []).map((s: any) => ({
+          id: s.id || s._id,
+          text: s.text,
+          tag: s.tag,
+          createdAt: s.createdAt,
+          similarQuestions: Array.isArray(s.similarQuestions) ? s.similarQuestions : [],
+          userName: s.userName,
         }));
 
         if (isCurrent) {
-          setHistory(submittedQuestions);
+          setHistory(mapped);
           setArchivePage(0);
         }
-      } catch (error) {
-        console.error("Could not sync submitted questions", error);
+      } catch (err) {
+        console.warn("Could not fetch submissions; showing an empty dashboard.", err);
+        if (isCurrent) {
+          setHistory([]);
+          setArchivePage(0);
+        }
+      } finally {
+        if (isCurrent) setLoadingHistory(false);
       }
     };
 
-    loadSubmittedQuestions();
-    window.addEventListener("focus", loadSubmittedQuestions);
-
+    fetchSubmissions();
+    // Re-fetch every time the user switches back to the tab
+    window.addEventListener("focus", fetchSubmissions);
     return () => {
       isCurrent = false;
-      window.removeEventListener("focus", loadSubmittedQuestions);
+      window.removeEventListener("focus", fetchSubmissions);
     };
   }, [user, activeTab, statsRefresh]);
 
@@ -220,7 +228,7 @@ export default function App() {
               </div>
               <div className="flex items-center gap-2 text-xs font-mono bg-emerald-50 text-emerald-700 px-3.5 py-1.5 rounded-xl border border-emerald-100 font-semibold">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
-                <span>Session Active — {history.length} question{history.length !== 1 ? "s" : ""} this tab</span>
+                <span>MongoDB Live — {history.length} submission{history.length !== 1 ? "s" : ""}</span>
               </div>
             </div>
 
@@ -284,7 +292,7 @@ export default function App() {
                         <div className="flex items-center gap-2.5">
                           <History className="w-4 h-4 text-slate-500" />
                           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                            This Session — {filteredHistory.length} Question{filteredHistory.length !== 1 ? "s" : ""}
+                            Submitted Questions — {filteredHistory.length} Record{filteredHistory.length !== 1 ? "s" : ""}
                           </h3>
                         </div>
                         {selectedTag && (
@@ -302,12 +310,17 @@ export default function App() {
                         className="px-6 py-4 overflow-y-auto flex-1"
                         style={{ scrollbarWidth: 'thin', scrollbarColor: '#e2e8f0 transparent' }}
                       >
-                        {history.length === 0 ? (
+                        {loadingHistory ? (
+                          <div className="text-center py-16">
+                            <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-3"></div>
+                            <p className="text-sm text-slate-400">Loading from MongoDB...</p>
+                          </div>
+                        ) : history.length === 0 ? (
                           <div className="text-center py-16 border border-dashed border-slate-200 rounded-2xl px-6 bg-slate-50/50">
                             <PlusCircle className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                            <p className="text-sm text-slate-500 font-semibold">No questions yet</p>
+                            <p className="text-sm text-slate-500 font-semibold">No submissions yet</p>
                             <p className="text-xs text-slate-400 mt-1 max-w-[260px] mx-auto leading-relaxed">
-                              Type a question above and click Submit. Your questions appear here and are saved for this session.
+                              Submit a question above — it will be saved to MongoDB and appear here instantly.
                             </p>
                           </div>
                         ) : filteredHistory.length === 0 ? (
@@ -343,10 +356,8 @@ export default function App() {
                                     </p>
                                   </div>
                                   <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-[10px] text-slate-400 font-mono">
-                                    <span>{new Date(item.createdAt).toLocaleDateString([], { month: "short", day: "numeric" })}</span>
-                                    <span className="bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 text-emerald-600 font-semibold font-sans">
-                                      Session
-                                    </span>
+                                    <span className="font-semibold text-slate-500">{item.userName || "Anonymous"}</span>
+                                    <span>{new Date(item.createdAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                                   </div>
                                 </button>
                               );
