@@ -11,6 +11,7 @@ import StatsSection from "./components/StatsSection";
 import { ArrowRight, Building2, ChevronLeft, ChevronRight, HelpCircle, History, Mail, PlusCircle, Search, Sparkles, X } from "lucide-react";
 import { TOPIC_THEMES } from "./components/QuestionBox";
 import { SimilarQuestionResult } from "./types";
+import { API_BASE_URL } from "./config/api";
 
 interface QuestionItem {
   id: string;
@@ -22,7 +23,6 @@ interface QuestionItem {
 
 const PAGE_SIZE = 15;
 const SESSION_USER_KEY = "qs_session_user";
-const API_BASE_URL = window.location.port === "5000" ? "" : "http://localhost:5000";
 
 function loadSessionUser() {
   try {

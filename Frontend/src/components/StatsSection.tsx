@@ -6,8 +6,7 @@
 import React, { useEffect, useState } from "react";
 import { BarChart3, Brain, Layers, GitCompare, Sparkles, RefreshCw } from "lucide-react";
 import { TOPIC_THEMES } from "./QuestionBox";
-
-const API_BASE_URL = window.location.port === "5000" ? "" : "http://localhost:5000";
+import { API_BASE_URL } from "../config/api";
 
 interface StatsSectionProps {
   onRefreshTrigger?: number;

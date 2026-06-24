@@ -6,6 +6,7 @@
 import React, { useState } from "react";
 import { Sparkles, Loader2, ArrowRight, BookOpen, AlertCircle, HelpCircle, Check, Compass, Award } from "lucide-react";
 import { QuestionResponse } from "../types";
+import { API_BASE_URL } from "../config/api";
 
 interface QuestionBoxProps {
   onQuestionSubmitted: (newQuestion: QuestionResponse) => void;
@@ -43,12 +44,6 @@ const SUGGESTED_IDEAS = [
   { text: "What is the central theme of Shakespeare's Hamlet?", label: "Literature" },
   { text: "Who is known as the Father of the Nation in India?", label: "India GK" },
 ];
-
-const API_BASE_URL =
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") &&
-  window.location.port !== "5000"
-    ? "http://localhost:5000"
-    : "";
 
 export default function QuestionBox({ onQuestionSubmitted, onResultChange }: QuestionBoxProps) {
   const [questionText, setQuestionText] = useState("");
