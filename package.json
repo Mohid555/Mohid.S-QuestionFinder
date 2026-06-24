@@ -8,7 +8,7 @@
     "server": "node backend/server.js",
     "seed:atlas": "node backend/scripts/seed-atlas-questions.mjs",
     "build": "vite build",
-    "start": "vite preview",
+    "start": "node backend/server.js",
     "clean": "rimraf dist",
     "lint": "tsc --noEmit"
   },

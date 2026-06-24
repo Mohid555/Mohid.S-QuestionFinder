@@ -27,6 +27,7 @@ try {
 } catch {}
 
 const PORT = Number(process.env.PORT || 5000);
+const HOST = process.env.HOST || "0.0.0.0";
 const MONGODB_URI = process.env.MONGODB_URI;
 const DB_NAME = process.env.MONGODB_DB || "questionfinder";
 const COLLECTION_NAMES = (process.env.MONGODB_COLLECTIONS || process.env.MONGODB_COLLECTION || "submissions,questions")
@@ -801,8 +802,8 @@ server.on("error", (err) => {
 });
 
 async function startServer() {
-  server.listen(PORT, () => {
-    console.log(`Question Finder backend running at http://localhost:${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Question Finder backend running at http://${HOST}:${PORT}`);
     if (USE_MONGODB) {
       console.log("   MongoDB check is running in the background...");
     } else {
