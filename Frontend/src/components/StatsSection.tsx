@@ -46,7 +46,7 @@ export default function StatsSection({ onRefreshTrigger }: StatsSectionProps) {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center py-20 bg-white border border-slate-100 rounded-3xl">
+      <div className="flex justify-center items-center py-16 sm:py-20 bg-white border border-slate-100 rounded-3xl">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
           <span className="text-sm font-medium text-slate-400">Loading system stats...</span>
@@ -62,10 +62,10 @@ export default function StatsSection({ onRefreshTrigger }: StatsSectionProps) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
         {/* Topic Frequency Distribution Chart */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-100">
+        <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-slate-100">
           <div className="flex items-center gap-2.5 mb-5">
             <BarChart3 className="w-4 h-4 text-indigo-600" />
-            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Subject Group Densities</h4>
+            <h4 className="text-xs sm:text-sm font-bold text-slate-800 uppercase tracking-wider">Subject Group Densities</h4>
           </div>
 
           {stats && (
@@ -78,7 +78,7 @@ export default function StatsSection({ onRefreshTrigger }: StatsSectionProps) {
 
                 return (
                   <div key={topic} className="space-y-1">
-                    <div className="flex justify-between items-baseline text-xs">
+                    <div className="flex flex-wrap justify-between items-baseline gap-1 text-xs">
                       <span className="font-semibold text-slate-700">{topic}</span>
                       <span className="font-mono text-slate-400">
                         {count} questions ({Math.round(ratio)}%)
@@ -98,11 +98,11 @@ export default function StatsSection({ onRefreshTrigger }: StatsSectionProps) {
         </div>
 
         {/* Explainability Block */}
-        <div className="lg:col-span-6 bg-white p-6 rounded-3xl border border-slate-100 flex flex-col justify-between">
+        <div className="lg:col-span-6 bg-white p-4 sm:p-6 rounded-3xl border border-slate-100 flex flex-col justify-between">
           <div>
             <div className="flex items-center gap-2.5 mb-5 text-indigo-650">
               <Brain className="w-5 h-5 animate-bounce" />
-              <h4 className="text-sm font-bold uppercase tracking-wider">Under the Hood: Vector Math</h4>
+              <h4 className="text-xs sm:text-sm font-bold uppercase tracking-wider">Under the Hood: Vector Math</h4>
             </div>
 
             <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
@@ -132,7 +132,7 @@ export default function StatsSection({ onRefreshTrigger }: StatsSectionProps) {
             </div>
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-50 text-[11px] font-mono text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+          <div className="mt-6 pt-4 border-t border-slate-50 text-[11px] font-mono text-slate-400 uppercase tracking-wider flex flex-wrap items-center gap-1.5">
             <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
             <span>Local Database Storage: ONLINE</span>
           </div>

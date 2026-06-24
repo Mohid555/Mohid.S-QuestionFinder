@@ -89,12 +89,40 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
   React.useEffect(() => {
     if (!result) return;
 
-    window.requestAnimationFrame(() => {
-      resultsRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
+    const timeoutId = window.setTimeout(() => {
+      const target = resultsRef.current;
+      if (!target) return;
+
+      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const targetTop = target.getBoundingClientRect().top + window.scrollY - 96;
+
+      if (prefersReducedMotion) {
+        window.scrollTo({ top: targetTop });
+        return;
+      }
+
+      const startTop = window.scrollY;
+      const distance = targetTop - startTop;
+      const duration = 1100;
+      const startTime = performance.now();
+
+      const easeInOutCubic = (t: number) =>
+        t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        window.scrollTo(0, startTop + distance * easeInOutCubic(progress));
+
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+
+      window.requestAnimationFrame(step);
+    }, 120);
+
+    return () => window.clearTimeout(timeoutId);
   }, [result]);
 
   // Rotation of academic messages for loading transparency
