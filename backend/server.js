@@ -220,21 +220,38 @@ async function readJson(fileName, fallback) {
 }
 
 async function loadQuestions() {
+  const localQuestions = await loadLocalQuestionCorpus();
   const db = await getDatabase();
   if (db) {
-    const questions = await readQuestionDocs(db);
-    if (questions.length > 0) {
-      return questions.map(normalizeQuestionDoc);
+    const dbQuestions = (await readQuestionDocs(db))
+      .map(normalizeQuestionDoc)
+      .filter(isSearchCorpusQuestion);
+
+    if (dbQuestions.length > 0) {
+      return mergeQuestionCorpus(localQuestions, dbQuestions);
     }
   }
 
+  return localQuestions;
+}
+
+async function loadLocalQuestionCorpus() {
   if (!cache.questions) {
     const data = await readJson("db-store.json", { questions: [] });
     const questions = Array.isArray(data.questions) ? data.questions : [];
-    cache.questions = questions.map(normalizeQuestionDoc);
+    cache.questions = questions.map(normalizeQuestionDoc).filter(isSearchCorpusQuestion);
   }
 
   return cache.questions;
+}
+
+function mergeQuestionCorpus(primaryQuestions, extraQuestions) {
+  const byKey = new Map();
+  for (const question of [...primaryQuestions, ...extraQuestions]) {
+    const key = question.id || normalizeText(question.text);
+    if (!byKey.has(key)) byKey.set(key, question);
+  }
+  return [...byKey.values()];
 }
 
 async function loadTopics() {
@@ -263,7 +280,14 @@ function normalizeQuestionDoc(q) {
     userName: q.userName || "Anonymous",
     similarQuestions: Array.isArray(q.similarQuestions) ? q.similarQuestions : [],
     searchText: q.searchText || q.text,
+    source: q.source || "",
   };
+}
+
+function isSearchCorpusQuestion(question) {
+  const source = String(question.source || "").toLowerCase();
+  const id = String(question.id || "");
+  return source !== "user-submission" && !id.startsWith("q-api-");
 }
 
 function sortDocsByCreatedAt(docs) {
@@ -585,6 +609,10 @@ function findSimilarQuestions(question, assignedTopic, questions) {
 
   // ── Hard fallback: same-topic questions ───────────────────────────────────
   // Shuffle so users don't always see the same first N questions
+  if (rawTokens.length > 0) {
+    return [];
+  }
+
   const sameTopicPool = questions
     .filter((q) => q.tag === assignedTopic && normalizeText(q.text) !== normalizedQuestion);
   const shuffled = sameTopicPool
