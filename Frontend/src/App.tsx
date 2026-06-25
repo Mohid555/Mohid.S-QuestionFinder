@@ -23,8 +23,40 @@ interface QuestionItem {
 }
 
 const PAGE_SIZE = 15;
+const DELETED_HISTORY_IDS_KEY = "question-finder-deleted-history-ids";
 
 type SessionUser = { id: string; email: string; name: string };
+
+function getDeletedHistoryIds() {
+  try {
+    const value = window.localStorage.getItem(DELETED_HISTORY_IDS_KEY);
+    const ids = value ? JSON.parse(value) : [];
+    return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === "string") : []);
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function getQuestionDeleteKeys(question: Pick<QuestionItem, "id" | "text" | "createdAt">) {
+  return [
+    question.id,
+    `${question.text.trim().toLowerCase()}::${question.createdAt}`,
+  ].filter(Boolean);
+}
+
+function isDeletedHistoryItem(question: QuestionItem, deletedIds = getDeletedHistoryIds()) {
+  return getQuestionDeleteKeys(question).some((key) => deletedIds.has(key));
+}
+
+function saveDeletedHistoryItem(question: QuestionItem) {
+  try {
+    const ids = getDeletedHistoryIds();
+    getQuestionDeleteKeys(question).forEach((key) => ids.add(key));
+    window.localStorage.setItem(DELETED_HISTORY_IDS_KEY, JSON.stringify([...ids]));
+  } catch {
+    // Local storage can be unavailable in private or restricted browser modes.
+  }
+}
 
 function toDateKey(value: string) {
   const date = new Date(value);
@@ -115,14 +147,17 @@ export default function App() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Failed to load.");
 
-        const mapped = (Array.isArray(data.submissions) ? data.submissions : []).map((s: any) => ({
-          id: s.id || s._id,
-          text: s.text,
-          tag: s.tag,
-          createdAt: s.createdAt,
-          similarQuestions: Array.isArray(s.similarQuestions) ? s.similarQuestions : [],
-          userName: s.userName,
-        }));
+        const deletedIds = getDeletedHistoryIds();
+        const mapped = (Array.isArray(data.submissions) ? data.submissions : [])
+          .map((s: any) => ({
+            id: s.id || s._id,
+            text: s.text,
+            tag: s.tag,
+            createdAt: s.createdAt,
+            similarQuestions: Array.isArray(s.similarQuestions) ? s.similarQuestions : [],
+            userName: s.userName,
+          }))
+          .filter((item: QuestionItem) => !isDeletedHistoryItem(item, deletedIds));
 
         if (isCurrent) {
           setHistory(mapped);
@@ -248,10 +283,10 @@ export default function App() {
 
   const handleDeleteQuestion = async (question: QuestionItem) => {
     setDeletingQuestionId(question.id);
+    saveDeletedHistoryItem(question);
     setHistory((prev) => prev.filter((item) => item.id !== question.id));
     setSelectedQuestion(null);
     setArchivePage(0);
-    setStatsRefresh((prev) => prev + 1);
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/submissions/${encodeURIComponent(question.id)}`, {
@@ -763,9 +798,30 @@ export default function App() {
                                       <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${theme.bg} ${theme.text} border ${theme.border} max-w-full truncate`}>
                                         {item.tag}
                                       </span>
-                                      <span className="text-[10px] font-mono text-slate-400">
-                                        {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-mono text-slate-400">
+                                          {new Date(item.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                        </span>
+                                        <span
+                                          role="button"
+                                          tabIndex={0}
+                                          onClick={(event) => {
+                                            event.stopPropagation();
+                                            handleDeleteQuestion(item);
+                                          }}
+                                          onKeyDown={(event) => {
+                                            if (event.key === "Enter" || event.key === " ") {
+                                              event.preventDefault();
+                                              event.stopPropagation();
+                                              handleDeleteQuestion(item);
+                                            }
+                                          }}
+                                          className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition-all hover:border-red-200 hover:bg-red-100"
+                                          aria-label="Delete question"
+                                        >
+                                          <Trash2 className="h-3.5 w-3.5" />
+                                        </span>
+                                      </div>
                                     </div>
                                     <p className="text-sm font-semibold text-slate-800 leading-normal mb-3 break-words">
                                       "{item.text}"
@@ -944,9 +1000,30 @@ export default function App() {
                               <span className={`max-w-full truncate rounded-full border px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider ${theme.bg} ${theme.text} ${theme.border}`}>
                                 {item.tag}
                               </span>
-                              <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">
-                                {new Date(item.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
-                              </span>
+                              <div className="flex items-center gap-2">
+                                <span className="rounded-full bg-slate-50 px-2.5 py-1 text-[10px] font-bold text-slate-400">
+                                  {new Date(item.createdAt).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
+                                </span>
+                                <span
+                                  role="button"
+                                  tabIndex={0}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleDeleteQuestion(item);
+                                  }}
+                                  onKeyDown={(event) => {
+                                    if (event.key === "Enter" || event.key === " ") {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      handleDeleteQuestion(item);
+                                    }
+                                  }}
+                                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-red-100 bg-red-50 text-red-500 transition-all hover:border-red-200 hover:bg-red-100"
+                                  aria-label="Delete question"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </span>
+                              </div>
                             </div>
 
                             <p className="text-sm font-bold leading-6 text-slate-800 break-words">
