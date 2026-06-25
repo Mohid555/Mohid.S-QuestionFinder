@@ -24,7 +24,7 @@ The project allows a user to enter a study question, automatically detects the a
 ### 1. Clone the Repository
 
 ```bash
-git clone <your-git-repo-link>
+git clone < https://github.com/Mohid555/Mohid.S-QuestionFinder.git >
 cd similar-study-question-finder
 ```
 
