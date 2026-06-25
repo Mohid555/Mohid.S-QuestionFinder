@@ -582,6 +582,7 @@ function toSimilarQuestion(question, similarity) {
 function fillSimilarQuestions(matches, sourceQuestion, assignedTopic, questions) {
   const normalizedQuestion = normalizeText(sourceQuestion);
   const seen = new Set(matches.map((match) => normalizeText(match.text)));
+  const sourceTokens = new Set(tokenize(sourceQuestion));
   const filled = matches.slice(0, 6);
 
   const addFromPool = (pool, baseScore) => {
@@ -590,6 +591,9 @@ function fillSimilarQuestions(matches, sourceQuestion, assignedTopic, questions)
 
       const normalizedText = normalizeText(question.text);
       if (!normalizedText || normalizedText === normalizedQuestion || seen.has(normalizedText)) continue;
+      const candidateTokens = new Set(tokenize(question.searchText || question.text));
+      const sharedTerms = [...sourceTokens].filter((token) => candidateTokens.has(token));
+      if (sharedTerms.length === 0) continue;
 
       seen.add(normalizedText);
       filled.push(toSimilarQuestion(question, Number(Math.max(0.2, baseScore - filled.length * 0.02).toFixed(2))));
@@ -597,7 +601,6 @@ function fillSimilarQuestions(matches, sourceQuestion, assignedTopic, questions)
   };
 
   addFromPool(questions.filter((question) => question.tag === assignedTopic), 0.58);
-  addFromPool(questions, 0.42);
 
   return filled.slice(0, 6);
 }
@@ -607,7 +610,9 @@ function findSimilarQuestions(question, assignedTopic, questions) {
   const { inv, idf, N, docs } = index;
 
   // ── Query processing ──────────────────────────────────────────────────────
+  const primaryTokens = tokenize(question);
   const rawTokens  = tokenize(expandQueryText(question, assignedTopic));
+  const primaryTokenSet = new Set(primaryTokens);
   const queryTerms = ngrams(rawTokens);
 
   if (queryTerms.length === 0) {
@@ -644,11 +649,15 @@ function findSimilarQuestions(question, assignedTopic, questions) {
     if (normalizeText(q.text) === normalizedQuestion) continue;
 
     const rawSim  = scores[i] / queryNorm;
+    const docTokens = new Set(tokenize(q.searchText || q.text));
+    const primaryHits = primaryTokens.filter((token) => docTokens.has(token)).length;
+    const sameTopic = q.tag === assignedTopic;
+    if (primaryTokens.length > 0 && primaryHits === 0 && (!sameTopic || rawSim < 0.32)) continue;
     // Topic bonus: small boost (0.08) only when content score is already non-zero
-    const topicBonus = (rawSim > 0 && q.tag === assignedTopic) ? 0.08 : 0;
+    const topicBonus = (rawSim > 0 && sameTopic) ? 0.08 : 0;
     const similarity = Math.min(0.97, rawSim + topicBonus);
 
-    if (similarity >= 0.05) {
+    if (similarity >= 0.12) {
       results.push({
         id: q.id, text: q.text, tag: q.tag,
         userName: q.userName || "Question Finder",
