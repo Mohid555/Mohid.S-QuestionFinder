@@ -247,23 +247,20 @@ export default function App() {
   };
 
   const handleDeleteQuestion = async (question: QuestionItem) => {
-    const confirmed = window.confirm("Delete this question from history?");
-    if (!confirmed) return;
-
     setDeletingQuestionId(question.id);
+    setHistory((prev) => prev.filter((item) => item.id !== question.id));
+    setSelectedQuestion(null);
+    setArchivePage(0);
+    setStatsRefresh((prev) => prev + 1);
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/submissions/${encodeURIComponent(question.id)}`, {
         method: "DELETE",
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Failed to delete this question.");
-
-      setHistory((prev) => prev.filter((item) => item.id !== question.id));
-      setSelectedQuestion(null);
-      setArchivePage(0);
-      setStatsRefresh((prev) => prev + 1);
     } catch (err: any) {
-      alert(err.message || "Unable to delete this question. Please try again.");
+      console.warn("Could not delete the saved question from the backend.", err);
     } finally {
       setDeletingQuestionId(null);
     }
