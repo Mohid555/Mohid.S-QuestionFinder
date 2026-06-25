@@ -15,6 +15,8 @@ interface TagFilterProps {
 export default function TagFilter({ selectedTag, onSelectTag, tagCounts }: TagFilterProps) {
   // Sum up all question node values
   const totalCount = tagCounts ? Object.values(tagCounts).reduce((a, b) => a + b, 0) : 0;
+  const countBadgeClass =
+    "inline-flex min-w-7 shrink-0 items-center justify-center rounded-lg border px-2 py-1 text-[11px] font-extrabold leading-none shadow-sm";
 
   return (
     <div className="space-y-2">
@@ -30,8 +32,10 @@ export default function TagFilter({ selectedTag, onSelectTag, tagCounts }: TagFi
           }`}
         >
           <span className="min-w-0 truncate">All Subjects</span>
-          <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-            selectedTag === null ? "bg-indigo-200 text-indigo-800" : "bg-slate-100 text-slate-500"
+          <span className={`${countBadgeClass} ${
+            selectedTag === null
+              ? "border-indigo-300 bg-indigo-600 text-white shadow-indigo-100"
+              : "border-slate-200 bg-white text-slate-700"
           }`}>
             {totalCount}
           </span>
@@ -53,8 +57,12 @@ export default function TagFilter({ selectedTag, onSelectTag, tagCounts }: TagFi
               }`}
             >
               <span className="min-w-0 truncate">{topic}</span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
-                isSelected ? "bg-indigo-200 text-indigo-800" : "bg-slate-100 text-slate-500"
+              <span className={`${countBadgeClass} ${
+                isSelected
+                  ? "border-indigo-300 bg-indigo-600 text-white shadow-indigo-100"
+                  : count > 0
+                    ? "border-slate-200 bg-white text-slate-700"
+                    : "border-slate-100 bg-slate-50 text-slate-500"
               }`}>
                 {count}
               </span>
