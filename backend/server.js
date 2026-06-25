@@ -529,6 +529,40 @@ function classifyTopic(question, topics) {
   return bestTopic;
 }
 
+function toSimilarQuestion(question, similarity) {
+  return {
+    id: question.id,
+    text: question.text,
+    tag: question.tag,
+    userName: question.userName || "Question Finder",
+    createdAt: question.createdAt,
+    similarity,
+  };
+}
+
+function fillSimilarQuestions(matches, sourceQuestion, assignedTopic, questions) {
+  const normalizedQuestion = normalizeText(sourceQuestion);
+  const seen = new Set(matches.map((match) => normalizeText(match.text)));
+  const filled = matches.slice(0, 6);
+
+  const addFromPool = (pool, baseScore) => {
+    for (const question of pool) {
+      if (filled.length >= 6) break;
+
+      const normalizedText = normalizeText(question.text);
+      if (!normalizedText || normalizedText === normalizedQuestion || seen.has(normalizedText)) continue;
+
+      seen.add(normalizedText);
+      filled.push(toSimilarQuestion(question, Number(Math.max(0.2, baseScore - filled.length * 0.02).toFixed(2))));
+    }
+  };
+
+  addFromPool(questions.filter((question) => question.tag === assignedTopic), 0.58);
+  addFromPool(questions, 0.42);
+
+  return filled.slice(0, 6);
+}
+
 function findSimilarQuestions(question, assignedTopic, questions) {
   const index = ensureBm25Index(questions);
   const { inv, idf, N, docs } = index;
@@ -592,7 +626,7 @@ function findSimilarQuestions(question, assignedTopic, questions) {
   // Strip internal _rawSim field before returning
   for (const r of top) delete r._rawSim;
 
-  if (top.length > 0) return top;
+  if (top.length >= 6) return top;
 
   // ── Second-pass: partial substring match across ALL questions ─────────────
   // Use raw tokens (unigrams only) with substring search for proper nouns etc.
@@ -619,13 +653,13 @@ function findSimilarQuestions(question, assignedTopic, questions) {
         similarity: Number(Math.min(0.65, q._sim).toFixed(2)),
       }));
 
-    if (partialScored.length > 0) return partialScored;
+    return fillSimilarQuestions([...top, ...partialScored], question, assignedTopic, questions);
   }
 
   // ── Hard fallback: same-topic questions ───────────────────────────────────
   // Shuffle so users don't always see the same first N questions
   if (rawTokens.length > 0) {
-    return [];
+    return fillSimilarQuestions(top, question, assignedTopic, questions);
   }
 
   const sameTopicPool = questions
@@ -636,12 +670,14 @@ function findSimilarQuestions(question, assignedTopic, questions) {
     .map(({ q }) => q)
     .slice(0, 6);
 
-  return shuffled.map((q, i) => ({
+  const fallbackMatches = shuffled.map((q, i) => ({
     id: q.id, text: q.text, tag: q.tag,
     userName: q.userName || "Question Finder",
     createdAt: q.createdAt,
     similarity: Number((0.42 - i * 0.02).toFixed(2)),
   }));
+
+  return fillSimilarQuestions([...top, ...fallbackMatches], question, assignedTopic, questions);
 }
 
 async function saveSubmittedQuestion(question) {
@@ -709,14 +745,22 @@ async function handleApi(request, response, url) {
     const docs = tag ? allDocs.filter((item) => item.tag === tag) : allDocs;
     const total = docs.length;
 
-    const submissions = docs.map((s) => ({
-      id:               s.id || String(s._id),
-      text:             s.text,
-      tag:              s.tag,
-      userName:         s.userName || "Anonymous",
-      similarQuestions: Array.isArray(s.similarQuestions) ? s.similarQuestions : [],
-      createdAt:        s.createdAt,
-    }));
+    const questions = await loadQuestions();
+    const submissions = docs.map((s) => {
+      const savedMatches = Array.isArray(s.similarQuestions) ? s.similarQuestions : [];
+      const similarQuestions = savedMatches.length >= 6
+        ? savedMatches.slice(0, 6)
+        : fillSimilarQuestions(savedMatches, s.text, s.tag, questions);
+
+      return {
+        id:               s.id || String(s._id),
+        text:             s.text,
+        tag:              s.tag,
+        userName:         s.userName || "Anonymous",
+        similarQuestions,
+        createdAt:        s.createdAt,
+      };
+    });
 
     sendJson(response, 200, { submissions, total });
     return;
