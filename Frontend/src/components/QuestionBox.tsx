@@ -36,13 +36,13 @@ export const TOPIC_THEMES: Record<string, { bg: string; text: string; border: st
 };
 
 const SUGGESTED_IDEAS = [
-  { text: "Why does photosynthesis require sunlight energy?", label: "Biology" },
-  { text: "What is the key difference between ionic and covalent bonds?", label: "Chemistry" },
-  { text: "Explain the fundamental theorem of calculus.", label: "Mathematics" },
-  { text: "How do database indexes speed up query processing?", label: "CS" },
-  { text: "What causes inflation in an economy?", label: "Economics" },
-  { text: "What is the central theme of Shakespeare's Hamlet?", label: "Literature" },
-  { text: "Who is known as the Father of the Nation in India?", label: "India GK" },
+  { text: "Why does photosynthesis require sunlight energy?", label: "Biology", topic: "Biology" },
+  { text: "What is the key difference between ionic and covalent bonds?", label: "Chemistry", topic: "Chemistry" },
+  { text: "Explain the fundamental theorem of calculus.", label: "Mathematics", topic: "Mathematics" },
+  { text: "How do database indexes speed up query processing?", label: "CS", topic: "Computer Science" },
+  { text: "What causes inflation in an economy?", label: "Economics", topic: "Economics" },
+  { text: "What is the central theme of Shakespeare's Hamlet?", label: "Literature", topic: "Literature & Language" },
+  { text: "Who is known as the Father of the Nation in India?", label: "India GK", topic: "Indian General Knowledge" },
 ];
 
 export default function QuestionBox({ onQuestionSubmitted, onResultChange }: QuestionBoxProps) {
@@ -930,23 +930,31 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-start justify-between gap-4">
             {/* Suggested prompts list */}
-            <div className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1 max-w-full sm:max-w-[70%]" data-reset-scroll>
+            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2 pb-1" data-reset-scroll>
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex-shrink-0">Ideas:</span>
-              <div className="flex gap-1.5 pl-1">
-                {SUGGESTED_IDEAS.map((idea, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => handleIdeaClick(idea.text)}
-                    disabled={loading}
-                    className="text-xs bg-slate-100 hover:bg-slate-200 active:bg-indigo-50 active:text-indigo-700 text-slate-600 px-3 py-1.5 rounded-full transition-all cursor-pointer truncate max-w-[160px] font-medium"
-                    title={idea.text}
-                  >
-                    {idea.label}
-                  </button>
-                ))}
+              <div className="flex min-w-0 flex-wrap gap-1.5 pl-1">
+                {SUGGESTED_IDEAS.map((idea, idx) => {
+                  const theme = TOPIC_THEMES[idea.topic] || {
+                    bg: "bg-slate-50",
+                    text: "text-slate-600",
+                    border: "border-slate-200",
+                  };
+
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleIdeaClick(idea.text)}
+                      disabled={loading}
+                      className={`max-w-[160px] truncate rounded-full border px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-60 hover:-translate-y-0.5 hover:shadow-sm ${theme.bg} ${theme.text} ${theme.border}`}
+                      title={idea.text}
+                    >
+                      {idea.label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
