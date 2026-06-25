@@ -504,41 +504,217 @@ function ensureBm25Index(questions) {
 
 const keywordMap = {
   Biology: [
-    "plant", "plants", "cell", "cells", "photosynthesis", "animal", "animals",
-    "chlorophyll", "chloroplast", "chloroplasts", "pigment", "pigments", "leaf", "leaves",
-    "dna", "rna", "organism", "organisms", "body", "blood", "heart",
-    "brain", "lung", "lungs", "respiration", "respiratory", "breathing",
-    "muscle", "muscles", "nerve", "nerves", "organ", "organs", "tissue",
-    "tissues", "bone", "bones", "skeleton", "digest", "digestion",
-    "stomach", "kidney", "kidneys", "liver", "gene", "genes", "genetic",
-    "virus", "viruses", "bacteria", "protein", "enzyme", "ecosystem",
-    "species", "evolution", "biology", "biological", "living", "life",
+    // Plants
+    "plant", "plants", "planta", "flora", "leaf", "leaves", "root", "roots", "stem", "stems",
+    "flower", "flowers", "seed", "seeds", "pollen", "fruit", "fruits", "tree", "trees",
+    "photosynthesis", "chlorophyll", "chloroplast", "chloroplasts", "pigment", "pigments",
+    // Animals
+    "animal", "animals", "fauna", "mammal", "mammals", "reptile", "reptiles",
+    "bird", "birds", "fish", "insect", "insects", "amphibian", "amphibians",
+    // Cells & Genetics
+    "cell", "cells", "cellular", "membrane", "nucleus", "cytoplasm", "mitochondria",
+    "dna", "rna", "chromosome", "chromosomes", "gene", "genes", "genetic", "genetics",
+    "heredity", "mutation", "mutations", "allele", "alleles", "genotype", "phenotype",
+    // Human Body
+    "body", "blood", "heart", "cardiac", "heartbeat", "pulse",
+    "brain", "neuron", "neurons", "neural", "nervous", "spinal",
+    "lung", "lungs", "pulmonary", "respiratory", "respiration", "breathing", "breath",
+    "muscle", "muscles", "muscular", "skeletal", "skeleton", "bone", "bones",
+    "nerve", "nerves", "organ", "organs", "tissue", "tissues",
+    "digest", "digestion", "digestive", "intestine", "intestines", "stomach", "esophagus",
+    "kidney", "kidneys", "renal", "liver", "hepatic", "pancreas", "gallbladder",
+    "skin", "dermis", "epidermis", "hair", "nail", "nails",
+    "eye", "eyes", "retina", "cornea", "ear", "ears", "cochlea",
+    "hormone", "hormones", "endocrine", "insulin", "adrenaline",
+    "immune", "immunity", "antibody", "antibodies", "antigen", "antigens", "lymph",
+    "artery", "arteries", "vein", "veins", "capillary", "capillaries", "circulatory",
+    "uterus", "ovary", "ovaries", "sperm", "embryo", "fetus",
+    // Microbes & Disease
+    "virus", "viruses", "viral", "bacteria", "bacterial", "pathogen", "pathogens",
+    "fungus", "fungi", "parasite", "parasites", "microbe", "microbes", "microorganism",
+    "infection", "disease", "diseases", "vaccine", "vaccines", "epidemic", "pandemic",
+    // Biochemistry
+    "protein", "proteins", "enzyme", "enzymes", "amino", "lipid", "lipids",
+    "carbohydrate", "carbohydrates", "glucose", "starch", "cellulose",
+    // Ecology
+    "ecosystem", "ecosystems", "ecology", "ecological", "habitat", "habitats",
+    "species", "population", "populations", "food chain", "food web",
+    "predator", "prey", "symbiosis", "parasite", "host",
+    "biome", "biomes", "biodiversity", "extinct", "extinction",
+    // Evolution
+    "evolution", "evolutionary", "natural selection", "adaptation", "adaptations",
+    "fossil", "fossils", "darwin", "species", "speciation",
+    // General Biology
+    "biology", "biological", "living", "life", "organism", "organisms", "biotic",
+    "abiotic", "reproduction", "reproductive", "mitosis", "meiosis", "osmosis",
+    "diffusion", "photosynthesis", "respiration", "metabolism", "anatomy",
+    "physiology", "zoology", "botany", "microbiology", "genetics",
   ],
-  Chemistry: ["atom", "molecule", "acid", "base", "reaction", "element", "compound", "bond", "chemical", "periodic", "solution"],
-  Physics: ["force", "energy", "motion", "gravity", "light", "electric", "speed", "velocity", "wave", "sound", "heat", "magnet"],
-  Mathematics: ["equation", "algebra", "calculus", "geometry", "number", "fraction", "angle", "graph", "theorem", "probability"],
-  "Computer Science": ["computer", "program", "algorithm", "data", "code", "database", "index", "software", "network", "internet", "api"],
-  History: ["war", "king", "empire", "revolution", "ancient", "independence", "civilization", "battle", "dynasty"],
-  Geography: ["country", "river", "mountain", "capital", "map", "continent", "population", "ocean", "climate", "city"],
-  Economics: ["money", "market", "inflation", "trade", "economy", "supply", "demand", "price", "tax", "bank", "gdp"],
-  Psychology: ["mental", "health", "mind", "behavior", "emotion", "stress", "anxiety", "depression", "memory", "learning", "personality"],
-  "Art & Music": ["photo", "photography", "image", "picture", "painting", "art", "music", "song", "instrument", "color", "design"],
-  "Literature & Language": ["poem", "story", "novel", "author", "language", "grammar", "shakespeare", "literature", "essay"],
-  "Earth Science": ["earth", "rock", "volcano", "earthquake", "soil", "weather", "atmosphere", "geology", "ocean"],
-  "Environmental Science": ["environment", "pollution", "climate", "ecosystem", "recycle", "conservation", "global warming"],
-  "Political Science": ["government", "politics", "democracy", "constitution", "election", "law", "parliament"],
-  "Philosophy & Ethics": ["ethics", "moral", "philosophy", "truth", "justice", "logic", "belief"],
-  "Indian General Knowledge": ["india", "indian", "bharat", "gandhi", "nehru", "isro", "rbi", "lok sabha", "rajya sabha"],
-  "General Science": ["science", "experiment", "matter", "technology", "research", "energy", "application", "problem", "problems", "engineer", "engineers", "engineering"],
+  Chemistry: [
+    "atom", "atoms", "atomic", "molecule", "molecules", "molecular", "element", "elements",
+    "compound", "compounds", "mixture", "mixtures", "substance", "substances",
+    "acid", "acids", "acidic", "base", "basic", "alkali", "alkaline", "neutral", "neutralization",
+    "pH", "salt", "salts",
+    "reaction", "reactions", "reactant", "reactants", "product", "products",
+    "oxidation", "reduction", "redox", "combustion", "decomposition",
+    "bond", "bonds", "bonding", "covalent", "ionic", "metallic", "hydrogen bond",
+    "electron", "electrons", "proton", "protons", "neutron", "neutrons", "nucleus",
+    "ion", "ions", "cation", "anion", "electrolyte", "electrolytes",
+    "periodic", "periodic table", "valence", "orbital", "orbitals", "isotope", "isotopes",
+    "solution", "solutions", "solute", "solvent", "dissolve", "dissolved", "concentration",
+    "mole", "moles", "molarity", "stoichiometry",
+    "chemical", "chemistry", "polymer", "polymers", "hydrocarbon", "hydrocarbons",
+    "organic", "inorganic", "catalyst", "catalysts", "enzyme",
+    "gas", "liquid", "solid", "plasma", "state",
+  ],
+  Physics: [
+    "force", "forces", "newton", "gravity", "gravitational", "weight", "mass",
+    "motion", "velocity", "speed", "acceleration", "momentum", "inertia",
+    "energy", "kinetic", "potential", "thermal", "mechanical", "nuclear",
+    "work", "power", "joule", "watt",
+    "light", "optics", "reflection", "refraction", "diffraction", "lens", "mirror",
+    "wave", "waves", "wavelength", "frequency", "amplitude", "vibration",
+    "sound", "acoustic", "acoustics", "decibel",
+    "heat", "temperature", "thermodynamics", "conduction", "convection", "radiation",
+    "electric", "electricity", "charge", "charges", "current", "voltage", "resistance",
+    "circuit", "circuits", "conductor", "conductors", "insulator",
+    "magnet", "magnetic", "magnetism", "electromagnetic",
+    "pressure", "fluid", "buoyancy", "archimedes",
+    "quantum", "relativity", "atom", "nuclear", "fission", "fusion",
+    "physics", "physical", "mechanics", "dynamics", "kinematics",
+  ],
+  Mathematics: [
+    "equation", "equations", "algebra", "algebraic", "calculus", "geometry", "geometric",
+    "number", "numbers", "integer", "integers", "fraction", "fractions", "decimal",
+    "percentage", "ratio", "ratios", "proportion", "proportions",
+    "angle", "angles", "triangle", "triangles", "quadrilateral", "polygon", "polygons",
+    "circle", "circles", "radius", "diameter", "circumference", "area", "volume",
+    "graph", "graphs", "coordinate", "coordinates", "function", "functions",
+    "theorem", "theorems", "proof", "proofs", "axiom",
+    "probability", "statistics", "mean", "median", "mode", "variance",
+    "matrix", "matrices", "vector", "vectors", "scalar",
+    "derivative", "integral", "limit", "limits", "logarithm", "exponent",
+    "prime", "factor", "factors", "multiple", "multiples", "divisor",
+    "math", "mathematics", "arithmetic", "trigonometry", "sine", "cosine",
+    "polynomial", "quadratic", "linear", "sequence", "series",
+  ],
+  "Computer Science": [
+    "computer", "computers", "computing", "program", "programs", "programming",
+    "algorithm", "algorithms", "data", "database", "databases", "code", "coding",
+    "software", "hardware", "network", "networks", "internet", "web",
+    "api", "binary", "bit", "byte", "memory", "processor", "cpu",
+    "variable", "function", "loop", "array", "object", "class",
+    "operating system", "compiler", "interpreter", "syntax", "runtime",
+    "cybersecurity", "encryption", "machine learning", "artificial intelligence",
+  ],
+  History: [
+    "war", "wars", "battle", "battles", "revolution", "revolutions",
+    "king", "kings", "queen", "queens", "emperor", "emperors", "empire", "empires",
+    "ancient", "medieval", "dynasty", "dynasties", "civilization", "civilizations",
+    "independence", "colony", "colonial", "colonialism", "treaty", "treaties",
+    "historical", "history", "century", "centuries",
+    "world war", "invasion", "uprising", "rebellion",
+  ],
+  Geography: [
+    "country", "countries", "nation", "nations", "continent", "continents",
+    "river", "rivers", "mountain", "mountains", "valley", "valleys",
+    "capital", "capitals", "city", "cities", "state", "province",
+    "ocean", "oceans", "sea", "seas", "lake", "lakes", "island", "islands",
+    "map", "maps", "latitude", "longitude", "equator", "hemisphere",
+    "population", "populations", "climate", "geography", "geographical",
+    "desert", "deserts", "forest", "forests", "border", "borders",
+  ],
+  Economics: [
+    "money", "currency", "market", "markets", "trade", "trading",
+    "economy", "economic", "economics", "inflation", "deflation",
+    "supply", "demand", "price", "prices", "cost", "costs",
+    "tax", "taxes", "taxation", "bank", "banks", "banking",
+    "gdp", "income", "investment", "investments", "profit", "loss",
+    "business", "businesses", "finance", "financial", "stock", "stocks",
+    "poverty", "wealth", "labor", "employment", "unemployment",
+  ],
+  Psychology: [
+    "mental", "mind", "brain", "behavior", "behaviour", "cognitive", "cognition",
+    "emotion", "emotions", "emotional", "feeling", "feelings",
+    "stress", "anxiety", "depression", "phobia", "disorder",
+    "memory", "memories", "learning", "perception", "attention",
+    "personality", "motivation", "intelligence", "iq",
+    "therapy", "therapist", "counseling", "psychology", "psychological",
+    "subconscious", "unconscious", "conscious", "psyche",
+  ],
+  "Art & Music": [
+    "art", "arts", "artistic", "painting", "paintings", "sculpture", "sculptor",
+    "music", "musical", "song", "songs", "melody", "rhythm", "harmony",
+    "instrument", "instruments", "guitar", "piano", "violin", "drum",
+    "photo", "photography", "photograph", "image", "picture", "pictures",
+    "color", "colors", "colour", "colours", "design", "designs",
+    "dance", "theater", "theatre", "film", "cinema", "artist", "artists",
+  ],
+  "Literature & Language": [
+    "poem", "poems", "poetry", "poet", "poets",
+    "story", "stories", "novel", "novels", "fiction", "nonfiction",
+    "author", "authors", "writer", "writers", "book", "books",
+    "language", "languages", "grammar", "syntax", "vocabulary",
+    "shakespeare", "literature", "literary", "essay", "essays",
+    "word", "words", "sentence", "sentences", "paragraph",
+    "metaphor", "simile", "alliteration", "rhyme",
+  ],
+  "Earth Science": [
+    "earth", "geology", "geological", "rock", "rocks", "mineral", "minerals",
+    "volcano", "volcanoes", "volcanic", "earthquake", "earthquakes", "seismic",
+    "soil", "erosion", "tectonic", "tectonics", "plate", "plates",
+    "weather", "atmosphere", "atmospheric", "stratosphere", "ozone",
+    "ocean", "oceanography", "tide", "tides", "tsunami",
+  ],
+  "Environmental Science": [
+    "environment", "environmental", "pollution", "pollutant", "pollutants",
+    "climate change", "global warming", "greenhouse", "carbon",
+    "ecosystem", "ecosystems", "conservation", "conserve", "preserve",
+    "recycle", "recycling", "renewable", "sustainability", "sustainable",
+    "biodiversity", "deforestation", "habitat loss",
+  ],
+  "Political Science": [
+    "government", "governments", "governance", "politics", "political",
+    "democracy", "democratic", "republic", "monarchy", "dictatorship",
+    "constitution", "constitutional", "election", "elections", "voting", "vote",
+    "parliament", "congress", "senate", "legislation", "legislative",
+    "policy", "policies", "civil rights", "freedom", "liberty",
+    "prime minister", "cabinet", "legislature", "geopolitics",
+  ],
+  "Philosophy & Ethics": [
+    "philosophy", "philosophical", "philosopher", "philosophers",
+    "ethics", "ethical", "moral", "morality", "morals",
+    "truth", "knowledge", "wisdom", "logic", "logical",
+    "justice", "fairness", "rights", "duty", "virtue",
+    "belief", "beliefs", "argument", "reasoning", "reason",
+    "consciousness", "existence", "metaphysics",
+  ],
+  "Indian General Knowledge": [
+    "india", "indian", "bharat", "gandhi", "nehru", "ambedkar",
+    "isro", "rbi", "sebi", "upsc", "iit", "iim",
+    "lok sabha", "rajya sabha", "parliament", "constitution",
+    "state", "states", "delhi", "mumbai", "kolkata", "chennai",
+    "hindi", "rupee", "cricket", "bollywood",
+  ],
+  "General Science": [
+    "science", "scientific", "scientist", "scientists",
+    "experiment", "experiments", "experimental", "laboratory", "lab",
+    "hypothesis", "theory", "theories", "observation", "observations",
+    "matter", "technology", "technological", "research",
+    "energy", "engineering", "engineer", "engineers",
+    "invention", "inventions", "discovery", "discoveries",
+  ],
 };
 
 const genericTopicWords = new Set(["general", "knowledge", "science"]);
 
 function classifyTopic(question, topics) {
   const text = normalizeText(question);
-  const words = new Set(text.split(" ").filter(Boolean));
+  const wordArr = text.split(" ").filter(Boolean);
+  const words = new Set(wordArr);
   const topicScores = new Map(topics.map((topic) => [topic, 0]));
 
+  // Pass 1 — topic name word overlap
   for (const topic of topics) {
     const topicWords = normalizeText(topic).split(" ");
     for (const word of topicWords) {
@@ -549,18 +725,36 @@ function classifyTopic(question, topics) {
     }
   }
 
+  // Pass 2 — keyword map: exact word match OR substring match (handles plurals/suffixes)
   for (const [topic, keywords] of Object.entries(keywordMap)) {
     for (const keyword of keywords) {
       const normalizedKeyword = normalizeText(keyword);
       const isPhrase = normalizedKeyword.includes(" ");
-      const matches = isPhrase ? text.includes(normalizedKeyword) : words.has(normalizedKeyword);
+      let matches = false;
+      if (isPhrase) {
+        matches = text.includes(normalizedKeyword);
+      } else {
+        // Exact word match first (high confidence)
+        if (words.has(normalizedKeyword)) {
+          matches = true;
+        } else {
+          // Substring/stem match: any word in the question starts with or contains the keyword
+          // (e.g. "digestive" matches keyword "digest", "muscular" matches "muscle")
+          for (const w of wordArr) {
+            if (w.length > 3 && (w.startsWith(normalizedKeyword) || normalizedKeyword.startsWith(w))) {
+              matches = true;
+              break;
+            }
+          }
+        }
+      }
       if (matches) {
         topicScores.set(topic, (topicScores.get(topic) || 0) + 3);
       }
     }
   }
 
-  let bestTopic = "General Knowledge";
+  let bestTopic = null;
   let bestScore = 0;
   for (const [topic, score] of topicScores.entries()) {
     if (score > bestScore) {
@@ -569,7 +763,8 @@ function classifyTopic(question, topics) {
     }
   }
 
-  return bestTopic;
+  // Default fallback: use General Science (better than General Knowledge for academic Qs)
+  return bestTopic || "General Science";
 }
 
 function toSimilarQuestion(question, similarity) {
@@ -620,10 +815,12 @@ function findSimilarQuestions(question, assignedTopic, questions) {
   const rawTokens  = tokenize(expandQueryText(question, assignedTopic));
   const queryTerms = ngrams(rawTokens);
 
+  const normalizedQuestion = normalizeText(question);
+
   if (queryTerms.length === 0) {
     // Absolute fallback: same-topic questions
     return questions
-      .filter((q) => q.tag === assignedTopic && normalizeText(q.text) !== normalizeText(question))
+      .filter((q) => q.tag === assignedTopic && normalizeText(q.text) !== normalizedQuestion)
       .slice(0, 6)
       .map((q, i) => ({
         id: q.id, text: q.text, tag: q.tag,
@@ -643,93 +840,117 @@ function findSimilarQuestions(question, assignedTopic, questions) {
     }
   }
 
-  // ── Normalise to [0, 1] and apply light topic bonus ──────────────────────
+  // ── Normalise to [0, 1] and apply topic bonus ─────────────────────────────
   const queryNorm = queryTerms.reduce((s, t) => s + (idf[t] || 0), 0) || 1;
-
-  const normalizedQuestion = normalizeText(question);
 
   const results = [];
   for (let i = 0; i < docs.length; i++) {
     const q = questions[i];
     if (normalizeText(q.text) === normalizedQuestion) continue;
 
-    const rawSim  = scores[i] / queryNorm;
+    const rawSim    = scores[i] / queryNorm;
     const docTokens = new Set(tokenize(q.searchText || q.text));
     const primaryHits = primaryTokens.filter((token) => docTokens.has(token)).length;
-    const sameTopic = q.tag === assignedTopic;
-    if (!sameTopic) continue;
-    if (assignedTopic === "General Science" && primaryTokens.length >= 3 && primaryHits < 2) continue;
-    if (primaryTokens.length >= 4 && primaryHits < 2) continue;
-    if (primaryTokens.length > 0 && primaryHits === 0 && rawSim < 0.2) continue;
-    // Topic bonus: small boost (0.08) only when content score is already non-zero
+    const sameTopic   = q.tag === assignedTopic;
+
+    // Topic bonus: boost same-topic results
     const topicBonus = (rawSim > 0 && sameTopic) ? 0.08 : 0;
     const similarity = Math.min(0.97, rawSim + topicBonus);
 
-    if (similarity >= 0.2) {
-      results.push({
-        id: q.id, text: q.text, tag: q.tag,
-        userName: q.userName || "Question Finder",
-        createdAt: q.createdAt,
-        similarity: Number(similarity.toFixed(2)),
-        _rawSim: rawSim,
-      });
+    // For same-topic results apply quality filter
+    if (sameTopic) {
+      if (assignedTopic === "General Science" && primaryTokens.length >= 3 && primaryHits < 2) continue;
+      if (primaryTokens.length >= 4 && primaryHits < 2) continue;
+      if (primaryTokens.length > 0 && primaryHits === 0 && rawSim < 0.15) continue;
+      if (similarity >= 0.18) {
+        results.push({
+          id: q.id, text: q.text, tag: q.tag,
+          userName: q.userName || "Question Finder",
+          createdAt: q.createdAt,
+          similarity: Number(similarity.toFixed(2)),
+          _rawSim: rawSim,
+          _sameTopic: true,
+        });
+      }
+    } else {
+      // Cross-topic: only include if there's meaningful content overlap
+      if (primaryHits >= 2 && rawSim >= 0.3) {
+        results.push({
+          id: q.id, text: q.text, tag: q.tag,
+          userName: q.userName || "Question Finder",
+          createdAt: q.createdAt,
+          similarity: Number(Math.min(0.65, rawSim).toFixed(2)),
+          _rawSim: rawSim,
+          _sameTopic: false,
+        });
+      }
     }
   }
 
-  results.sort((a, b) => b.similarity - a.similarity);
-  const top = results.slice(0, 6);
+  // Sort: same-topic first, then by score
+  results.sort((a, b) => {
+    if (a._sameTopic !== b._sameTopic) return a._sameTopic ? -1 : 1;
+    return b.similarity - a.similarity;
+  });
 
-  // Strip internal _rawSim field before returning
-  for (const r of top) delete r._rawSim;
+  const top = results.slice(0, 6);
+  for (const r of top) { delete r._rawSim; delete r._sameTopic; }
 
   if (top.length >= 6) return top;
 
-  // ── Second-pass: partial substring match across ALL questions ─────────────
-  // Use raw tokens (unigrams only) with substring search for proper nouns etc.
+  // ── Second-pass: partial substring match (same-topic priority) ────────────
   if (rawTokens.length > 0) {
+    const seenTexts = new Set(top.map((r) => normalizeText(r.text)));
+    seenTexts.add(normalizedQuestion);
+
     const partialScored = questions
-      .filter((q) => normalizeText(q.text) !== normalizedQuestion)
+      .filter((q) => !seenTexts.has(normalizeText(q.text)))
       .map((q) => {
         const qText = normalizeText(q.searchText || q.text);
         let hits = 0;
         for (const token of rawTokens) {
           if (token.length > 2 && qText.includes(token)) hits += 1;
         }
-        const primaryHits = primaryTokens.filter((token) => qText.split(" ").includes(token)).length;
+        const primaryHitsLocal = primaryTokens.filter((t) => qText.split(" ").includes(t)).length;
         const sim = hits / rawTokens.length;
-        const topicBonus = sim > 0 && q.tag === assignedTopic ? 0.05 : 0;
-        return { ...q, _sim: sim + topicBonus, _primaryHits: primaryHits };
+        const sameTopic = q.tag === assignedTopic;
+        const topicBonus = sim > 0 && sameTopic ? 0.05 : 0;
+        return { ...q, _sim: sim + topicBonus, _primaryHits: primaryHitsLocal, _sameTopic: sameTopic };
       })
       .filter((q) => {
-        if (q._sim < 0.2 || q.tag !== assignedTopic) return false;
-        if (assignedTopic === "General Science" && primaryTokens.length >= 3) return q._primaryHits >= 2;
-        if (primaryTokens.length >= 4) return q._primaryHits >= 2;
-        return q._primaryHits > 0 || q._sim >= 0.35;
+        if (q._sim < 0.15) return false;
+        if (q._sameTopic) {
+          if (assignedTopic === "General Science" && primaryTokens.length >= 3) return q._primaryHits >= 2;
+          if (primaryTokens.length >= 4) return q._primaryHits >= 2;
+          return q._primaryHits > 0 || q._sim >= 0.3;
+        }
+        // Cross-topic: require stronger match
+        return q._primaryHits >= 2 && q._sim >= 0.3;
       })
-      .sort((a, b) => b._sim - a._sim)
-      .slice(0, 6)
-      .map((q, i) => ({
+      .sort((a, b) => {
+        if (a._sameTopic !== b._sameTopic) return a._sameTopic ? -1 : 1;
+        return b._sim - a._sim;
+      })
+      .slice(0, 6 - top.length)
+      .map((q) => ({
         id: q.id, text: q.text, tag: q.tag,
         userName: q.userName || "Question Finder",
         createdAt: q.createdAt,
         similarity: Number(Math.min(0.65, q._sim).toFixed(2)),
       }));
 
-    return fillSimilarQuestions([...top, ...partialScored], question, assignedTopic, questions);
+    const combined = [...top, ...partialScored];
+    if (combined.length >= 3) return combined.slice(0, 6);
+
+    // Still not enough — fill from same-topic pool
+    return fillSimilarQuestions(combined, question, assignedTopic, questions);
   }
 
-  // ── Hard fallback: same-topic questions ───────────────────────────────────
-  // Shuffle so users don't always see the same first N questions
-  if (rawTokens.length > 0) {
-    return fillSimilarQuestions(top, question, assignedTopic, questions);
-  }
-
+  // ── Hard fallback: shuffled same-topic questions ──────────────────────────
   const sameTopicPool = questions
     .filter((q) => q.tag === assignedTopic && normalizeText(q.text) !== normalizedQuestion);
-  const shuffled = sameTopicPool
-    .map((q) => ({ q, sort: Math.random() }))
-    .sort((a, b) => a.sort - b.sort)
-    .map(({ q }) => q)
+  const shuffled = [...sameTopicPool]
+    .sort(() => Math.random() - 0.5)
     .slice(0, 6);
 
   const fallbackMatches = shuffled.map((q, i) => ({
