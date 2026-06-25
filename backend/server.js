@@ -384,6 +384,8 @@ const stopWords = new Set([
   "them", "than", "any", "some", "such", "while", "both", "through",
   "during", "before", "since", "first", "second", "called", "known",
   "name", "named", "refer", "often", "many", "same", "new", "old",
+  "term", "terms", "describe", "describes", "described",
+  "world", "real", "knowledge", "practiced", "practice",
   "part", "one", "two", "three", "four", "five", "six", "seven",
   "eight", "nine", "ten",
 ]);
@@ -430,7 +432,6 @@ function expandQueryText(text, assignedTopic) {
   for (const [term, extra] of Object.entries(expansions)) {
     if (normalized.includes(term)) extraTerms.push(extra);
   }
-  if (subjectExpansionMap[assignedTopic]) extraTerms.push(subjectExpansionMap[assignedTopic]);
 
   return extraTerms.length ? `${text} ${extraTerms.join(" ")}` : text;
 }
@@ -528,8 +529,10 @@ const keywordMap = {
   "Political Science": ["government", "politics", "democracy", "constitution", "election", "law", "parliament"],
   "Philosophy & Ethics": ["ethics", "moral", "philosophy", "truth", "justice", "logic", "belief"],
   "Indian General Knowledge": ["india", "indian", "bharat", "gandhi", "nehru", "isro", "rbi", "lok sabha", "rajya sabha"],
-  "General Science": ["science", "experiment", "matter", "technology", "research", "energy"],
+  "General Science": ["science", "experiment", "matter", "technology", "research", "energy", "application", "problem", "problems", "engineer", "engineers", "engineering"],
 };
+
+const genericTopicWords = new Set(["general", "knowledge", "science"]);
 
 function classifyTopic(question, topics) {
   const text = normalizeText(question);
@@ -539,6 +542,7 @@ function classifyTopic(question, topics) {
   for (const topic of topics) {
     const topicWords = normalizeText(topic).split(" ");
     for (const word of topicWords) {
+      if (genericTopicWords.has(word)) continue;
       if (word.length > 2 && words.has(word)) {
         topicScores.set(topic, (topicScores.get(topic) || 0) + 2);
       }
@@ -594,6 +598,8 @@ function fillSimilarQuestions(matches, sourceQuestion, assignedTopic, questions)
       const candidateTokens = new Set(tokenize(question.searchText || question.text));
       const sharedTerms = [...sourceTokens].filter((token) => candidateTokens.has(token));
       if (sharedTerms.length === 0) continue;
+      if (assignedTopic === "General Science" && sourceTokens.size >= 3 && sharedTerms.length < 2) continue;
+      if (sourceTokens.size >= 4 && sharedTerms.length < 2) continue;
 
       seen.add(normalizedText);
       filled.push(toSimilarQuestion(question, Number(Math.max(0.2, baseScore - filled.length * 0.02).toFixed(2))));
@@ -612,7 +618,6 @@ function findSimilarQuestions(question, assignedTopic, questions) {
   // ── Query processing ──────────────────────────────────────────────────────
   const primaryTokens = tokenize(question);
   const rawTokens  = tokenize(expandQueryText(question, assignedTopic));
-  const primaryTokenSet = new Set(primaryTokens);
   const queryTerms = ngrams(rawTokens);
 
   if (queryTerms.length === 0) {
@@ -652,12 +657,15 @@ function findSimilarQuestions(question, assignedTopic, questions) {
     const docTokens = new Set(tokenize(q.searchText || q.text));
     const primaryHits = primaryTokens.filter((token) => docTokens.has(token)).length;
     const sameTopic = q.tag === assignedTopic;
-    if (primaryTokens.length > 0 && primaryHits === 0 && (!sameTopic || rawSim < 0.32)) continue;
+    if (!sameTopic) continue;
+    if (assignedTopic === "General Science" && primaryTokens.length >= 3 && primaryHits < 2) continue;
+    if (primaryTokens.length >= 4 && primaryHits < 2) continue;
+    if (primaryTokens.length > 0 && primaryHits === 0 && rawSim < 0.2) continue;
     // Topic bonus: small boost (0.08) only when content score is already non-zero
     const topicBonus = (rawSim > 0 && sameTopic) ? 0.08 : 0;
     const similarity = Math.min(0.97, rawSim + topicBonus);
 
-    if (similarity >= 0.12) {
+    if (similarity >= 0.2) {
       results.push({
         id: q.id, text: q.text, tag: q.tag,
         userName: q.userName || "Question Finder",
@@ -687,11 +695,17 @@ function findSimilarQuestions(question, assignedTopic, questions) {
         for (const token of rawTokens) {
           if (token.length > 2 && qText.includes(token)) hits += 1;
         }
+        const primaryHits = primaryTokens.filter((token) => qText.split(" ").includes(token)).length;
         const sim = hits / rawTokens.length;
         const topicBonus = sim > 0 && q.tag === assignedTopic ? 0.05 : 0;
-        return { ...q, _sim: sim + topicBonus };
+        return { ...q, _sim: sim + topicBonus, _primaryHits: primaryHits };
       })
-      .filter((q) => q._sim >= 0.1)
+      .filter((q) => {
+        if (q._sim < 0.2 || q.tag !== assignedTopic) return false;
+        if (assignedTopic === "General Science" && primaryTokens.length >= 3) return q._primaryHits >= 2;
+        if (primaryTokens.length >= 4) return q._primaryHits >= 2;
+        return q._primaryHits > 0 || q._sim >= 0.35;
+      })
       .sort((a, b) => b._sim - a._sim)
       .slice(0, 6)
       .map((q, i) => ({

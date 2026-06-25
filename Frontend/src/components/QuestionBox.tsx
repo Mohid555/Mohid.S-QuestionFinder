@@ -50,6 +50,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const resultsRef = React.useRef<HTMLDivElement | null>(null);
+  const activeRequestIdRef = React.useRef(0);
   
   // Storing the processed result from the backend
   const [result, setResult] = useState<QuestionResponse | null>(null);
@@ -722,7 +723,9 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       "know", "see", "way", "look", "first", "new", "now", "find", "here",
       "thing", "things", "being", "between", "need", "system", "systems",
       "called", "used", "using", "use", "part", "parts", "type", "types",
-      "following", "example", "different", "same", "another", "form", "forms"
+      "following", "example", "different", "same", "another", "form", "forms",
+      "term", "terms", "describe", "describes", "described",
+      "world", "real", "knowledge", "practiced", "practice"
     ]);
     const primaryTerms = normalizedQuery
       .split(/\s+/)
@@ -792,7 +795,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       return scored;
     };
 
-    let topCandidates = scoreCandidates([...sameTopicIndices, ...otherIndices]);
+    let topCandidates = scoreCandidates(sameTopicIndices);
 
     // Never reject a query. If overlap is weak, show questions from the
     // classified topic and favor Indian GK for broad general queries.
@@ -917,7 +920,11 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (questionText.trim().length < 8) {
+    const submittedText = questionText.trim();
+    const requestId = activeRequestIdRef.current + 1;
+    activeRequestIdRef.current = requestId;
+
+    if (submittedText.length < 8) {
       setError("Please write a longer, complete study question (minimum 8 characters).");
       return;
     }
@@ -942,7 +949,7 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         response = await fetch(`${API_BASE_URL}/api/questions/search`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: questionText.trim(), userName: "Sir" }),
+          body: JSON.stringify({ question: submittedText, userName: "Sir" }),
         });
       } catch {
         throw new Error("Cannot connect to the question processing API. Keep the backend running with: npm run server");
@@ -953,25 +960,32 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         throw new Error(apiResult.error || "Backend could not process this question.");
       }
 
-      const localTopic = classifyTopic(questionText.trim());
-      const localMatches = findSemanticMatches(questionText.trim(), localTopic);
+      if (activeRequestIdRef.current !== requestId) return;
+
+      const localTopic = classifyTopic(submittedText);
+      const localMatches = findSemanticMatches(submittedText, localTopic);
       const shouldUseLocalModel =
         localMatches.length > (apiResult.similarQuestions?.length || 0) ||
         (apiResult.tag === "General Knowledge" && localTopic !== "General Knowledge") ||
         localMatches.some((match) => match.tag === localTopic);
       const finalResult = shouldUseLocalModel
-        ? { ...apiResult, tag: localTopic, similarQuestions: localMatches }
-        : { ...apiResult, similarQuestions: apiResult.similarQuestions || [] };
+        ? { ...apiResult, text: submittedText, tag: localTopic, similarQuestions: localMatches }
+        : { ...apiResult, text: submittedText, similarQuestions: apiResult.similarQuestions || [] };
+      finalResult.similarQuestions = finalResult.similarQuestions.filter((match) => match.similarity >= 0.2);
 
       setResult(finalResult);
       onResultChange?.(true);
       onQuestionSubmitted(finalResult);
       setQuestionText("");
     } catch (err: any) {
-      setError(err.message || "Unable to process question. Please check the backend server and try again.");
+      if (activeRequestIdRef.current === requestId) {
+        setError(err.message || "Unable to process question. Please check the backend server and try again.");
+      }
     } finally {
       clearInterval(interval);
-      setLoading(false);
+      if (activeRequestIdRef.current === requestId) {
+        setLoading(false);
+      }
     }
   };
 
