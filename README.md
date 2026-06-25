@@ -51,7 +51,7 @@ Copy-Item .env.example .env
 Update `.env` with your MongoDB Atlas connection string:
 
 ```env
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-host>/questionfinder?retryWrites=true&w=majority&appName=QuestionFinder
+MONGODB_URI=mongodb+srv://mohid:mohid123@<cluster-host>/questionfinder?retryWrites=true&w=majority&appName=QuestionFinder
 MONGODB_DB=questionfinder
 MONGODB_COLLECTIONS=submissions,questions
 PORT=5000
