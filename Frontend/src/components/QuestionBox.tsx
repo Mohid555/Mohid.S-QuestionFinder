@@ -193,7 +193,8 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         "food chain", "food web", "organ", "organs", "tissue", "tissues", "membrane",
         "skeleton", "skeletal", "bone", "bones", "skull", "spine", "rib", "joint", "joints",
         "brain", "neuron", "synapse", "immune", "antibody", "antigen", "vaccine",
-        "mitochondria", "nucleus", "cytoplasm", "ribosome", "chloroplast", "organelle",
+        "mitochondria", "nucleus", "cytoplasm", "ribosome", "chloroplast", "chloroplasts",
+        "chlorophyll", "pigment", "pigments", "stomata", "xylem", "phloem", "leaf", "leaves", "organelle",
         "biotic", "abiotic", "symbiosis", "parasite", "host", "pollination", "seed",
         "embryo", "fetus", "pregnancy", "birth", "puberty", "hormone", "hormones",
         "insulin", "adrenaline", "thyroid", "pituitary", "endocrine", "exocrine",
@@ -496,7 +497,9 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     // Instantly resolves the most common partial/abbreviated words to a subject.
     const shortAliasMap: Record<string, string> = {
       // Biology
-      "photo": "Biology", "chloro": "Biology",
+      "photo": "Biology", "chloro": "Biology", "chlorophyll": "Biology",
+      "chloroplast": "Biology", "chloroplasts": "Biology", "pigment": "Biology",
+      "plant": "Biology", "plants": "Biology", "leaf": "Biology", "leaves": "Biology",
       "bio": "Biology", "cell": "Biology", "cells": "Biology",
       "gene": "Biology", "genes": "Biology", "dna": "Biology", "rna": "Biology",
       "sperm": "Biology", "ovum": "Biology", "ovary": "Biology", "uterus": "Biology",
@@ -676,6 +679,14 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     for (const [alias, expansions] of Object.entries(aliases)) {
       if (normalizedQuery.includes(alias)) aliasTerms.push(...expansions);
     }
+    const domainExpansions: Record<string, string[]> = {
+      chlorophyll: ["biology", "plant", "plants", "leaf", "leaves", "chloroplast", "chloroplasts", "photosynthesis", "light", "sunlight", "energy", "green", "pigment"],
+      chloroplast: ["biology", "plant", "plants", "leaf", "leaves", "photosynthesis", "light", "sunlight", "energy", "organelle"],
+      photosynthesis: ["biology", "plant", "plants", "leaf", "leaves", "chloroplast", "chlorophyll", "sunlight", "carbon", "dioxide", "water", "glucose", "oxygen"],
+    };
+    for (const [term, expansions] of Object.entries(domainExpansions)) {
+      if (normalizedQuery.includes(term)) aliasTerms.push(...expansions);
+    }
     const queryWords = `${normalizedQuery} ${aliasTerms.join(" ")}`
       .split(/\s+/)
       .filter(w => w.length > 2);
@@ -736,9 +747,10 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
           matchScore += 2.5;
         }
         const normalizedScore = queryTerms.length > 0 ? matchScore / queryTerms.length : 0;
-        const topicBonus = allQuestions[i].tag === topic ? 0.12 : 0;
+        const topicBonus = allQuestions[i].tag === topic ? 0.35 : 0;
+        const offTopicPenalty = allQuestions[i].tag !== topic ? 0.25 : 0;
         if (normalizedScore > 0.1) {
-          scored.push({ idx: i, score: normalizedScore + topicBonus });
+          scored.push({ idx: i, score: normalizedScore + topicBonus - offTopicPenalty });
         }
       }
       scored.sort((a, b) => b.score - a.score);
@@ -821,7 +833,43 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     });
 
     unique.sort((a, b) => b.similarity - a.similarity);
-    return unique.slice(0, 6);
+    const filled = [...unique];
+    const seenTexts = new Set(filled.map(r => r.text.toLowerCase().trim()));
+
+    for (const candidate of topCandidates) {
+      if (filled.length >= 6) break;
+      const question = allQuestions[candidate.idx];
+      const key = question?.text?.toLowerCase().trim();
+      if (!question || !key || seenTexts.has(key) || key === text.toLowerCase().trim()) continue;
+      seenTexts.add(key);
+      filled.push({
+        id: question.id,
+        text: question.text,
+        tag: question.tag,
+        userName: question.userName || "",
+        createdAt: question.createdAt,
+        similarity: Math.min(0.82, 0.48 + candidate.score * 0.20)
+      });
+    }
+
+    if (filled.length < 6) {
+      for (const question of allQuestions) {
+        if (filled.length >= 6) break;
+        const key = question?.text?.toLowerCase().trim();
+        if (!question || question.tag !== topic || !key || seenTexts.has(key) || key === text.toLowerCase().trim()) continue;
+        seenTexts.add(key);
+        filled.push({
+          id: question.id,
+          text: question.text,
+          tag: question.tag,
+          userName: question.userName || "",
+          createdAt: question.createdAt,
+          similarity: Math.max(0.32, 0.58 - filled.length * 0.03)
+        });
+      }
+    }
+
+    return filled.slice(0, 6);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -862,9 +910,19 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         throw new Error(apiResult.error || "Backend could not process this question.");
       }
 
-      setResult(apiResult);
+      const localTopic = classifyTopic(questionText.trim());
+      const localMatches = findSemanticMatches(questionText.trim(), localTopic);
+      const shouldUseLocalModel =
+        localMatches.length > (apiResult.similarQuestions?.length || 0) ||
+        (apiResult.tag === "General Knowledge" && localTopic !== "General Knowledge") ||
+        localMatches.some((match) => match.tag === localTopic);
+      const finalResult = shouldUseLocalModel
+        ? { ...apiResult, tag: localTopic, similarQuestions: localMatches }
+        : { ...apiResult, similarQuestions: apiResult.similarQuestions || [] };
+
+      setResult(finalResult);
       onResultChange?.(true);
-      onQuestionSubmitted({ ...apiResult, similarQuestions: apiResult.similarQuestions || [] });
+      onQuestionSubmitted(finalResult);
       setQuestionText("");
     } catch (err: any) {
       setError(err.message || "Unable to process question. Please check the backend server and try again.");

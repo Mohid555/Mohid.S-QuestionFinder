@@ -466,6 +466,7 @@ function ensureBm25Index(questions) {
 const keywordMap = {
   Biology: [
     "plant", "plants", "cell", "cells", "photosynthesis", "animal", "animals",
+    "chlorophyll", "chloroplast", "chloroplasts", "pigment", "pigments", "leaf", "leaves",
     "dna", "rna", "organism", "organisms", "body", "blood", "heart",
     "brain", "lung", "lungs", "respiration", "respiratory", "breathing",
     "muscle", "muscles", "nerve", "nerves", "organ", "organs", "tissue",
