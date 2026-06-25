@@ -703,7 +703,11 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       "called", "used", "using", "use", "part", "parts", "type", "types",
       "following", "example", "different", "same", "another", "form", "forms"
     ]);
-    const queryTerms = queryWords.filter(w => !stopWords.has(w));
+    const primaryTerms = normalizedQuery
+      .split(/\s+/)
+      .filter(w => w.length > 2 && !stopWords.has(w));
+    const queryTerms = Array.from(new Set(queryWords.filter(w => !stopWords.has(w))));
+    const primaryTermSet = new Set(primaryTerms);
 
     if (queryTerms.length === 0) return [];
 
