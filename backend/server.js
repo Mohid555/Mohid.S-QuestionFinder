@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -316,6 +316,21 @@ async function readQuestionDocs(db, filter = {}) {
 async function readSubmissionDocs(db, filter = {}) {
   const docs = await db.collection(WRITE_COLLECTION).find(filter).toArray();
   return sortDocsByCreatedAt(docs);
+}
+
+async function deleteSubmissionDoc(id) {
+  const db = await getDatabase();
+  if (!db) {
+    throw new Error("MongoDB is not configured, so saved history cannot be deleted.");
+  }
+
+  const filters = [{ id }];
+  if (ObjectId.isValid(id)) {
+    filters.push({ _id: new ObjectId(id) });
+  }
+
+  const result = await db.collection(WRITE_COLLECTION).deleteOne({ $or: filters });
+  return result.deletedCount > 0;
 }
 
 async function loadUserSubmissions() {
@@ -704,6 +719,27 @@ async function handleApi(request, response, url) {
     }));
 
     sendJson(response, 200, { submissions, total });
+    return;
+  }
+
+  if (request.method === "DELETE" && url.pathname.startsWith("/api/submissions/")) {
+    const id = decodeURIComponent(url.pathname.replace("/api/submissions/", "")).trim();
+    if (!id) {
+      sendJson(response, 400, { error: "Submission id is required." });
+      return;
+    }
+
+    try {
+      const deleted = await deleteSubmissionDoc(id);
+      if (!deleted) {
+        sendJson(response, 404, { error: "Submission not found." });
+        return;
+      }
+
+      sendJson(response, 200, { success: true, id });
+    } catch (err) {
+      sendJson(response, 500, { error: err.message || "Failed to delete submission." });
+    }
     return;
   }
 

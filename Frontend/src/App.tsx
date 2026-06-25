@@ -8,7 +8,7 @@ import Navbar, { AppTab } from "./components/Navbar";
 import QuestionBox from "./components/QuestionBox";
 import TagFilter from "./components/TagFilter";
 import StatsSection from "./components/StatsSection";
-import { ArrowRight, Building2, CalendarDays, ChevronLeft, ChevronRight, Eye, EyeOff, FileText, Filter, GraduationCap, HelpCircle, History, Lock, Mail, PlusCircle, Search, Shield, Sparkles, X } from "lucide-react";
+import { ArrowRight, Building2, CalendarDays, ChevronLeft, ChevronRight, Eye, EyeOff, FileText, Filter, GraduationCap, HelpCircle, History, Lock, Mail, PlusCircle, Search, Shield, Sparkles, Trash2, X } from "lucide-react";
 import { TOPIC_THEMES } from "./components/QuestionBox";
 import { SimilarQuestionResult } from "./types";
 import { API_BASE_URL } from "./config/api";
@@ -93,6 +93,7 @@ export default function App() {
   const [archivePage, setArchivePage] = useState(0);
   const [hasResult, setHasResult] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<QuestionItem | null>(null);
+  const [deletingQuestionId, setDeletingQuestionId] = useState<string | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historySubjectFilter, setHistorySubjectFilter] = useState("all");
   const [historyDateFilter, setHistoryDateFilter] = useState("");
@@ -243,6 +244,29 @@ export default function App() {
     });
     setArchivePage(0);
     setStatsRefresh((prev) => prev + 1);
+  };
+
+  const handleDeleteQuestion = async (question: QuestionItem) => {
+    const confirmed = window.confirm("Delete this question from history?");
+    if (!confirmed) return;
+
+    setDeletingQuestionId(question.id);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/submissions/${encodeURIComponent(question.id)}`, {
+        method: "DELETE",
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Failed to delete this question.");
+
+      setHistory((prev) => prev.filter((item) => item.id !== question.id));
+      setSelectedQuestion(null);
+      setArchivePage(0);
+      setStatsRefresh((prev) => prev + 1);
+    } catch (err: any) {
+      alert(err.message || "Unable to delete this question. Please try again.");
+    } finally {
+      setDeletingQuestionId(null);
+    }
   };
 
   const handleLogout = () => {
@@ -990,14 +1014,25 @@ export default function App() {
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedQuestion(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
-                aria-label="Close suggested questions"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteQuestion(selectedQuestion)}
+                  disabled={deletingQuestionId === selectedQuestion.id}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-extrabold text-red-600 transition-all hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>{deletingQuestionId === selectedQuestion.id ? "Deleting" : "Delete"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedQuestion(null)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+                  aria-label="Close suggested questions"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="px-4 sm:px-6 py-5 overflow-y-auto max-h-[64vh] sm:max-h-[58vh]">
