@@ -684,9 +684,30 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       chloroplast: ["biology", "plant", "plants", "leaf", "leaves", "photosynthesis", "light", "sunlight", "energy", "organelle"],
       photosynthesis: ["biology", "plant", "plants", "leaf", "leaves", "chloroplast", "chlorophyll", "sunlight", "carbon", "dioxide", "water", "glucose", "oxygen"],
     };
+    const subjectExpansions: Record<string, string[]> = {
+      Biology: ["biology", "biological", "life", "living", "organism", "cell", "cells", "plant", "plants", "animal", "animals", "dna", "gene", "genes", "photosynthesis", "chlorophyll", "chloroplast", "respiration", "ecosystem", "species"],
+      Chemistry: ["chemistry", "chemical", "atom", "atoms", "molecule", "molecules", "element", "compound", "acid", "base", "reaction", "bond", "periodic", "solution", "ion", "electron", "proton", "neutron"],
+      Physics: ["physics", "physical", "force", "energy", "motion", "gravity", "light", "sound", "wave", "heat", "electricity", "electric", "magnet", "current", "voltage", "speed", "velocity", "acceleration"],
+      Mathematics: ["mathematics", "math", "equation", "algebra", "calculus", "geometry", "number", "fraction", "angle", "graph", "theorem", "probability", "statistics", "derivative", "integral"],
+      "Computer Science": ["computer", "science", "computing", "algorithm", "data", "database", "code", "programming", "software", "network", "internet", "api", "binary", "memory", "processor"],
+      History: ["history", "historical", "war", "revolution", "empire", "ancient", "medieval", "king", "queen", "dynasty", "battle", "civilization", "independence", "treaty"],
+      Geography: ["geography", "country", "countries", "river", "mountain", "capital", "continent", "ocean", "climate", "map", "population", "city", "latitude", "longitude"],
+      Economics: ["economics", "economy", "money", "market", "inflation", "trade", "supply", "demand", "price", "tax", "bank", "gdp", "business", "finance"],
+      Psychology: ["psychology", "mental", "health", "mind", "behavior", "emotion", "stress", "anxiety", "memory", "learning", "personality", "cognition"],
+      "Art & Music": ["art", "music", "painting", "photo", "photography", "image", "picture", "song", "instrument", "color", "design", "gallery", "artist"],
+      "Literature & Language": ["literature", "language", "poem", "poetry", "story", "novel", "author", "grammar", "shakespeare", "essay", "writing", "word"],
+      "Earth Science": ["earth", "science", "geology", "rock", "mineral", "volcano", "earthquake", "soil", "weather", "atmosphere", "ocean", "climate", "tectonic"],
+      "Environmental Science": ["environment", "environmental", "pollution", "climate", "ecosystem", "conservation", "recycle", "warming", "sustainability", "biodiversity"],
+      "Political Science": ["political", "science", "government", "politics", "democracy", "constitution", "election", "law", "parliament", "court", "policy", "rights"],
+      "Philosophy & Ethics": ["philosophy", "ethics", "moral", "truth", "justice", "logic", "belief", "argument", "reason", "values"],
+      "Indian General Knowledge": ["india", "indian", "bharat", "gandhi", "nehru", "isro", "rbi", "lok", "sabha", "rajya", "constitution", "state"],
+      "General Science": ["science", "experiment", "matter", "technology", "research", "energy", "observation", "hypothesis", "laboratory"],
+      "General Knowledge": ["general", "knowledge", "facts", "current", "affairs", "world", "person", "place", "organization", "event"],
+    };
     for (const [term, expansions] of Object.entries(domainExpansions)) {
       if (normalizedQuery.includes(term)) aliasTerms.push(...expansions);
     }
+    if (subjectExpansions[topic]) aliasTerms.push(...subjectExpansions[topic]);
     const queryWords = `${normalizedQuery} ${aliasTerms.join(" ")}`
       .split(/\s+/)
       .filter(w => w.length > 2);
@@ -730,17 +751,24 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         const qWords = qText.split(/\s+/).filter((w: string) => w.length > 2 && !stopWords.has(w));
         const qWordSet = new Set(qWords);
         let matchScore = 0;
+        let primaryHits = 0;
+        let expandedHits = 0;
 
         for (const term of queryTerms) {
+          const isPrimaryTerm = primaryTermSet.has(term);
           // Exact word match — higher weight for longer words (more specific)
           if (qWordSet.has(term)) {
-            matchScore += 1 + (term.length > 5 ? 0.5 : 0);
+            matchScore += (isPrimaryTerm ? 2.4 : 0.9) + (term.length > 5 ? 0.6 : 0);
+            if (isPrimaryTerm) primaryHits += 1;
+            else expandedHits += 1;
           }
           // Stem/substring match — only for words 4+ chars to avoid false positives
           if (term.length >= 4) {
             for (const qw of qWords) {
               if (qw !== term && (qw.startsWith(term.slice(0, -1)) || term.startsWith(qw.slice(0, -1)))) {
-                matchScore += 0.5;
+                matchScore += isPrimaryTerm ? 0.9 : 0.35;
+                if (isPrimaryTerm) primaryHits += 0.5;
+                else expandedHits += 0.5;
                 break;
               }
             }
@@ -748,12 +776,15 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
         }
 
         if (normalizedQuery.length >= 5 && qText.includes(normalizedQuery)) {
-          matchScore += 2.5;
+          matchScore += 4;
+          primaryHits += primaryTerms.length || 1;
         }
-        const normalizedScore = queryTerms.length > 0 ? matchScore / queryTerms.length : 0;
-        const topicBonus = allQuestions[i].tag === topic ? 0.35 : 0;
-        const offTopicPenalty = allQuestions[i].tag !== topic ? 0.25 : 0;
-        if (normalizedScore > 0.1) {
+        const normalizedScore = matchScore / Math.max(1, primaryTerms.length * 2.4 + (queryTerms.length - primaryTerms.length) * 0.9);
+        const sameTopic = allQuestions[i].tag === topic;
+        const topicBonus = sameTopic ? 0.35 : 0;
+        const offTopicPenalty = sameTopic ? 0 : 0.35;
+        const hasUsefulOverlap = primaryHits > 0 || (sameTopic && expandedHits >= 1);
+        if (hasUsefulOverlap && normalizedScore > 0.08) {
           scored.push({ idx: i, score: normalizedScore + topicBonus - offTopicPenalty });
         }
       }
@@ -768,10 +799,11 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     if (topCandidates.length === 0) {
       topCandidates = allQuestions
         .map((question, index) => ({ question, index }))
-        .filter(({ question }) =>
-          question.tag === topic ||
-          (topic === "General Knowledge" && question.tag === "Indian General Knowledge")
-        )
+        .filter(({ question }) => {
+          if (question.tag !== topic) return false;
+          const qWords = new Set(normalize(question.searchText || question.text).split(/\s+/));
+          return queryTerms.some((term) => qWords.has(term));
+        })
         .slice(0, 6)
         .map(({ index }) => ({ idx: index, score: 0.2 }));
     }
@@ -801,13 +833,18 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     for (const neighbor of neighbors || []) {
       const nq = allQuestions[neighbor.idx];
       if (nq && nq.text.toLowerCase() !== text.toLowerCase()) {
+        const nWords = new Set(normalize(nq.searchText || nq.text).split(/\s+/));
+        const sharesPrimaryTerm = primaryTerms.some((term) => nWords.has(term));
+        const sharesExpandedTerm = queryTerms.some((term) => nWords.has(term));
+        const sameTopic = nq.tag === topic;
+        if (!sameTopic && !sharesPrimaryTerm && !(neighbor.score >= 0.72 && sharesExpandedTerm)) continue;
         results.push({
           id: nq.id,
           text: nq.text,
           tag: nq.tag,
           userName: nq.userName || "",
           createdAt: nq.createdAt,
-          similarity: neighbor.score
+          similarity: sameTopic ? neighbor.score : Math.min(0.68, neighbor.score)
         });
       }
     }
@@ -860,7 +897,9 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
       for (const question of allQuestions) {
         if (filled.length >= 6) break;
         const key = question?.text?.toLowerCase().trim();
-        if (!question || question.tag !== topic || !key || seenTexts.has(key) || key === text.toLowerCase().trim()) continue;
+        const qWords = new Set(normalize(question?.searchText || question?.text || "").split(/\s+/));
+        const hasExpandedOverlap = queryTerms.some((term) => qWords.has(term));
+        if (!question || question.tag !== topic || !hasExpandedOverlap || !key || seenTexts.has(key) || key === text.toLowerCase().trim()) continue;
         seenTexts.add(key);
         filled.push({
           id: question.id,
@@ -895,8 +934,8 @@ export default function QuestionBox({ onQuestionSubmitted, onResultChange }: Que
     }, 800);
 
     try {
-      // Simulate AI processing time (the real computation was done offline)
-      await new Promise((r) => setTimeout(r, 1500));
+      // Keep a brief visual acknowledgement without slowing down processing.
+      await new Promise((r) => setTimeout(r, 250));
 
       let response: Response;
       try {

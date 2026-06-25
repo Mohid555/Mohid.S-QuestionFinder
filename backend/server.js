@@ -391,10 +391,48 @@ const stopWords = new Set([
 // ─── BM25 index (built lazily on first search call) ────────────────────────
 let bm25Index = null;
 
+const subjectExpansionMap = {
+  Biology: "biology biological life living organism cell cells plant plants animal animals dna gene genes photosynthesis chlorophyll chloroplast respiration ecosystem species",
+  Chemistry: "chemistry chemical atom atoms molecule molecules element compound acid base reaction bond periodic solution ion electron proton neutron",
+  Physics: "physics physical force energy motion gravity light sound wave heat electricity electric magnet current voltage speed velocity acceleration",
+  Mathematics: "mathematics math equation algebra calculus geometry number fraction angle graph theorem probability statistics derivative integral",
+  "Computer Science": "computer science computing algorithm data database code programming software network internet api binary memory processor",
+  History: "history historical war revolution empire ancient medieval king queen dynasty battle civilization independence treaty",
+  Geography: "geography country countries river mountain capital continent ocean climate map population city latitude longitude",
+  Economics: "economics economy money market inflation trade supply demand price tax bank gdp business finance",
+  Psychology: "psychology mental health mind behavior emotion stress anxiety memory learning personality cognition",
+  "Art & Music": "art music painting photo photography image picture song instrument color design gallery artist",
+  "Literature & Language": "literature language poem poetry story novel author grammar shakespeare essay writing word",
+  "Earth Science": "earth science geology rock mineral volcano earthquake soil weather atmosphere ocean climate tectonic",
+  "Environmental Science": "environment environmental pollution climate ecosystem conservation recycle warming sustainability biodiversity",
+  "Political Science": "political science government politics democracy constitution election law parliament court policy rights",
+  "Philosophy & Ethics": "philosophy ethics moral truth justice logic belief argument reason values",
+  "Indian General Knowledge": "india indian bharat gandhi nehru isro rbi lok sabha rajya sabha constitution state",
+  "General Science": "science experiment matter technology research energy observation hypothesis laboratory",
+  "General Knowledge": "general knowledge facts current affairs world person place organization event",
+};
+
 function tokenize(text) {
   return normalizeText(text)
     .split(" ")
     .filter((w) => w.length > 2 && !stopWords.has(w));
+}
+
+function expandQueryText(text, assignedTopic) {
+  const normalized = normalizeText(text);
+  const expansions = {
+    chlorophyll: "biology plant plants leaf leaves chloroplast chloroplasts photosynthesis light sunlight energy green pigment pigments",
+    chloroplast: "biology plant plants leaf leaves photosynthesis chlorophyll light sunlight energy organelle",
+    photosynthesis: "biology plant plants leaf leaves chloroplast chlorophyll sunlight carbon dioxide water glucose oxygen",
+  };
+
+  const extraTerms = [];
+  for (const [term, extra] of Object.entries(expansions)) {
+    if (normalized.includes(term)) extraTerms.push(extra);
+  }
+  if (subjectExpansionMap[assignedTopic]) extraTerms.push(subjectExpansionMap[assignedTopic]);
+
+  return extraTerms.length ? `${text} ${extraTerms.join(" ")}` : text;
 }
 
 /** Extract all unigrams + bigrams + trigrams from a token array */
@@ -569,7 +607,7 @@ function findSimilarQuestions(question, assignedTopic, questions) {
   const { inv, idf, N, docs } = index;
 
   // ── Query processing ──────────────────────────────────────────────────────
-  const rawTokens  = tokenize(question);
+  const rawTokens  = tokenize(expandQueryText(question, assignedTopic));
   const queryTerms = ngrams(rawTokens);
 
   if (queryTerms.length === 0) {
