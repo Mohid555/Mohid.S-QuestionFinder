@@ -29,7 +29,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -90,6 +90,13 @@ jobs:
 
             npm ci --omit=dev
 
+            sudo apt-get update
+            sudo apt-get install -y curl ca-certificates python3 python3-pip python3-venv
+
+            if [ -f backend/requirements.txt ]; then
+              python3 -m pip install --break-system-packages -r backend/requirements.txt
+            fi
+
             sudo tee "/etc/systemd/system/$APP_NAME.service" >/dev/null << SERVICEEOF
           [Unit]
           Description=Question Finder backend
@@ -100,7 +107,8 @@ jobs:
           User=$USER
           WorkingDirectory=$APP_DIR
           EnvironmentFile=$APP_DIR/.env
-          ExecStart=/usr/bin/node backend/server.js
+          Environment=NODE_ENV=production
+          ExecStart=/usr/bin/node $APP_DIR/server.js
           Restart=always
           RestartSec=5
 
@@ -111,9 +119,15 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl enable "$APP_NAME"
             sudo systemctl restart "$APP_NAME"
-            sleep 3
-            sudo systemctl --no-pager --full status "$APP_NAME"
-            node -e "fetch('http://127.0.0.1:${{ secrets.PORT || '5000' }}/api/health').then(r => { if (!r.ok) process.exit(1); return r.text(); }).then(console.log)"
+            sleep 5
+
+            if ! sudo systemctl is-active --quiet "$APP_NAME"; then
+              sudo systemctl status "$APP_NAME" --no-pager
+              sudo journalctl -u "$APP_NAME" -n 100 --no-pager
+              exit 1
+            fi
+
+            curl -fsS "http://127.0.0.1:${{ secrets.PORT || '5000' }}/api/health"
 
             if ! command -v nginx >/dev/null 2>&1; then
               sudo apt-get update
@@ -148,7 +162,7 @@ jobs:
             sudo nginx -t
             sudo systemctl enable --now nginx
             sudo systemctl reload nginx || sudo systemctl restart nginx
-            node -e "fetch('http://127.0.0.1/api/health').then(r => { if (!r.ok) process.exit(1); return r.text(); }).then(console.log)"
+            curl -fsS "http://127.0.0.1/api/health"
 
             rm -f /tmp/questionfinder-release.tar.gz
           EOF
