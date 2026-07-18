@@ -44,7 +44,9 @@ jobs:
       - name: Prepare deployment bundle
         run: |
           mkdir -p release
-          cp -r backend dist package.json package-lock.json server.js release/
+          mkdir -p release/backend
+          cp -r dist package.json package-lock.json server.js release/
+          cp backend/server.js backend/db-store.json backend/topics.json release/backend/
           tar -czf release.tar.gz -C release .
 
       - name: Configure SSH key
@@ -67,6 +69,8 @@ jobs:
 
             sudo mkdir -p "$APP_DIR"
             sudo chown -R "$USER:$USER" "$APP_DIR"
+            rm -rf "$APP_DIR/backend" "$APP_DIR/dist" "$APP_DIR/node_modules"
+            rm -f "$APP_DIR/package.json" "$APP_DIR/package-lock.json" "$APP_DIR/server.js"
             tar -xzf /tmp/questionfinder-release.tar.gz -C "$APP_DIR"
             cd "$APP_DIR"
 
