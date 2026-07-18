@@ -1,12 +1,12 @@
 # Mohid.S - Question Finder
 
-An AI-assisted study question finder that classifies a student's question by subject, searches for similar previous questions, and stores submitted questions in MongoDB.
+An AI-assisted study question finder that classifies a student's question by subject and searches for similar previous questions.
 
 ## Chosen Option
 
 I chose the **Similar Study Question Finder** option.
 
-The project allows a user to enter a study question, automatically detects the academic subject, finds related questions from the existing question database, and saves the new submission for future use.
+The project allows a user to enter a study question, automatically detects the academic subject, and finds related questions from the existing question database.
 
 ## Project Overview
 
@@ -16,7 +16,6 @@ Use Link --> questionfindermohid.netlify.app
 
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS
 - **Backend:** Node.js HTTP API
-- **Database:** MongoDB Atlas
 - **AI / ML Search:** Topic classification, BM25 text ranking, and precomputed semantic similarity data
 - **Icons / UI:** Lucide React
 - **Optional data preparation:** Python, sentence-transformers, NumPy, scikit-learn
@@ -37,33 +36,7 @@ cd similar-study-question-finder
 npm install
 ```
 
-### 3. Create the Environment File
-
-Copy `.env.example` to a new file named `.env`.
-
-```bash
-cp .env.example .env
-```
-
-On Windows PowerShell, use:
-
-```powershell
-Copy-Item .env.example .env
-```
-
-Update `.env` with your MongoDB Atlas connection string:
-
-```env
-MONGODB_URI=mongodb+srv://mohid:mohid123@<cluster-host>/questionfinder?retryWrites=true&w=majority&appName=QuestionFinder
-MONGODB_DB=questionfinder
-MONGODB_COLLECTIONS=submissions,questions
-PORT=5000
-VITE_API_BASE_URL=http://localhost:5000
-```
-
-`VITE_API_BASE_URL` is important when running locally because it tells the React frontend to use your local backend instead of the hosted API.
-
-### 4. Start the Backend
+### 3. Start the Backend
 
 Open one terminal and run:
 
@@ -87,7 +60,7 @@ Health check:
 http://localhost:5000/api/health
 ```
 
-### 5. Start the Frontend
+### 4. Start the Frontend
 
 Open a second terminal and run:
 
@@ -105,7 +78,7 @@ Frontend URL:
 http://localhost:5173
 ```
 
-### 6. Login for Demo
+### 5. Login for Demo
 
 Use the demo credentials shown in the app.
 
@@ -152,7 +125,6 @@ Runs TypeScript checking.
 - Topic filter sidebar
 - Question history and previous reports
 - Statistics page for topic distribution
-- MongoDB storage for submitted questions
 - Local fallback question database for development
 
 ## Project Structure
@@ -172,7 +144,6 @@ similar-study-question-finder/
 |   `-- similarity_map.json
 |-- modal.py
 |-- package.json
-|-- .env.example
 `-- README.md
 ```
 
@@ -247,8 +218,7 @@ When a question is submitted:
 
 1. The backend classifies the subject.
 2. It finds the most similar questions.
-3. It saves the submitted question and its matches in MongoDB.
-4. The frontend displays the result with match percentages.
+3. The frontend displays the result with match percentages.
 
 ## Optional: Regenerate Seed Data
 
@@ -257,7 +227,7 @@ The project already includes local seed data, so this step is optional.
 If you want to regenerate or upload a larger dataset, install the Python dependencies:
 
 ```bash
-pip install sentence-transformers datasets scikit-learn numpy pymongo python-dotenv
+pip install sentence-transformers datasets scikit-learn numpy python-dotenv
 ```
 
 Then run:
@@ -266,13 +236,10 @@ Then run:
 python modal.py
 ```
 
-This script prepares study questions, creates embeddings, and can upload seed data to MongoDB Atlas.
+This script prepares study questions and creates embeddings.
 
 ## Notes for Evaluators
 
-- The app can run locally with MongoDB Atlas configured in `.env`.
-- If MongoDB is not configured, the backend can still use local JSON data for question search.
-- User submissions require MongoDB to be saved permanently.
 - The production frontend can be built using `npm run build`.
 
 ## Author

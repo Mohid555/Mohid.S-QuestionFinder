@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { MongoClient, ObjectId } from "mongodb";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -28,25 +27,6 @@ try {
 
 const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || "0.0.0.0";
-const MONGODB_URI = process.env.MONGODB_URI;
-const DB_NAME = process.env.MONGODB_DB || "questionfinder";
-const COLLECTION_NAMES = (process.env.MONGODB_COLLECTIONS || process.env.MONGODB_COLLECTION || "submissions,questions")
-  .split(",")
-  .map((name) => name.trim())
-  .filter(Boolean);
-const WRITE_COLLECTION = COLLECTION_NAMES[0] || "submissions";
-const SEED_COLLECTION = COLLECTION_NAMES[1] || WRITE_COLLECTION;
-let mongoUnavailableReason = null;
-
-// Detect placeholder / unconfigured URIs
-const PLACEHOLDER_PATTERNS = ["<db_password>", "username:password", "<password>", "yourpassword", "your_password"];
-const HAS_VALID_PRIMARY_URI = Boolean(MONGODB_URI) &&
-  !PLACEHOLDER_PATTERNS.some((p) => MONGODB_URI.toLowerCase().includes(p.toLowerCase()));
-const USE_MONGODB = HAS_VALID_PRIMARY_URI;
-
-if (!USE_MONGODB) {
-  console.warn("⚠️  MongoDB NOT configured — set MONGODB_URI in your .env file.");
-}
 
 const jsonHeaders = {
   "Content-Type": "application/json",
@@ -72,9 +52,6 @@ let cache = {
   topics: null,
 };
 
-let mongoClient = null;
-let mongoConnecting = false;
-let mongoSeeded = false;
 
 async function readStoreData() {
   const data = await readJson("db-store.json", { users: [], questions: [] });
@@ -82,125 +59,6 @@ async function readStoreData() {
     users: Array.isArray(data.users) ? data.users : [],
     questions: Array.isArray(data.questions) ? data.questions : [],
   };
-}
-
-async function ensureSeedData(db) {
-  if (mongoSeeded) return;
-
-  const data = await readStoreData();
-  if (!data.questions.length) {
-    mongoSeeded = true;
-    return;
-  }
-
-  const collection = db.collection(SEED_COLLECTION);
-  const existingQuestions = await collection.estimatedDocumentCount();
-  if (existingQuestions >= data.questions.length) {
-    mongoSeeded = true;
-    return;
-  }
-
-  const seedDocs = data.questions.map((question) => ({
-    ...question,
-    id: question.id || `seed-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-    searchText: question.searchText || question.text,
-    createdAt: question.createdAt || new Date().toISOString(),
-  }));
-
-  await collection.deleteMany({});
-  for (let i = 0; i < seedDocs.length; i += 500) {
-    await collection.insertMany(seedDocs.slice(i, i + 500), { ordered: false });
-  }
-
-  mongoSeeded = true;
-  console.log(`Seeded ${seedDocs.length} hidden questions into MongoDB Atlas.`);
-}
-
-async function getDatabase() {
-  if (!USE_MONGODB) return null;
-  if (mongoUnavailableReason) return null;
-  if (mongoConnecting) return null;
-
-  if (!mongoClient) {
-    const options = {
-      retryWrites: true,
-      w: "majority",
-      maxPoolSize: 10,
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 10000,
-      // Disable certificate verification as a test (temporary troubleshooting only)
-      // WARNING: Never use in production!
-      tlsAllowInvalidCertificates: true,  // ⚠️ TEMPORARY - for troubleshooting only
-      tlsAllowInvalidHostnames: true,      // ⚠️ TEMPORARY - for troubleshooting only
-      retryWrites: true,
-    };
-
-    mongoConnecting = true;
-
-    try {
-      console.log("Attempting to connect to MongoDB Atlas...");
-      console.log(`  URI: ${MONGODB_URI.replace(/:[^:]*@/, ':***@')}`);  // Hide password
-      console.log("  ⚠️  Using permissive SSL settings (TEMPORARY - for troubleshooting)");
-      mongoClient = new MongoClient(MONGODB_URI, options);
-      await mongoClient.connect();
-      
-      console.log("✅ Connected to MongoDB Atlas.");
-      await mongoClient.db("admin").command({ ping: 1 });
-      console.log("✅ Database verified (ping successful).");
-
-      mongoUnavailableReason = null;
-      const db = mongoClient.db(DB_NAME);
-      await ensureSeedData(db);
-
-      return db;
-    } catch (err) {
-      mongoClient = null;
-      console.error("\n❌ MongoDB Connection Error Details:");
-      console.error(`   Code: ${err.code}`);
-      console.error(`   Name: ${err.name}`);
-      console.error(`   Message: ${err.message}`);
-      
-      // Provide specific guidance based on error type
-      if (err.message?.includes("SSL") || err.message?.includes("ssl") || err.message?.includes("certificate") || err.message?.includes("alert")) {
-        console.error("\n   🔧 SSL/TLS Handshake Error - This is usually a network/firewall issue:");
-        console.error("      CRITICAL CHECKS:");
-        console.error("      1. ✅ VERIFY IN MONGODB ATLAS DASHBOARD:");
-        console.error("         - Go to Security → Network Access");
-        console.error("         - Look for entry '0.0.0.0/0' (Allow from Anywhere)");
-        console.error("         - If missing, click 'Add IP Address' → 'Allow access from anywhere'");
-        console.error("      2. ✅ TRY THESE FIXES IN ORDER:");
-        console.error("         a) Restart your backend server");
-        console.error("         b) Disconnect from VPN if using one");
-        console.error("         c) Disable Windows Defender Firewall temporarily");
-        console.error("         d) Disable antivirus temporarily");
-        console.error("         e) Try from a different network (mobile hotspot)");
-        console.error("      3. ✅ VERIFY CONNECTION STRING:");
-        console.error("         - Go to MongoDB Atlas → Connect → Drivers");
-        console.error("         - Copy the connection string");
-        console.error("         - Make sure .env matches EXACTLY");
-        console.error("      4. ✅ TEST WITH DIFFERENT MONGODB INSTANCE:");
-        console.error("         - Try connecting to a different MongoDB cluster");
-        console.error("         - If that works, your QuestionFinder cluster may be paused");
-      } else if (err.message?.includes("ENOTFOUND") || err.message?.includes("ECONNREFUSED")) {
-        console.error("\n   🔧 Network Error - Can't reach MongoDB:");
-        console.error("      1. Check internet connectivity: ping 8.8.8.8");
-        console.error("      2. Verify cluster name in connection string");
-        console.error("      3. Check firewall is not blocking mongodb.net");
-      } else if (err.message?.includes("authentication failed")) {
-        console.error("\n   🔧 Authentication Error:");
-        console.error("      1. Verify username and password in MONGODB_URI");
-        console.error("      2. Check database user exists in MongoDB Atlas");
-        console.error("      3. Try resetting the database user password");
-      }
-      
-      throw err;
-    } finally {
-      mongoConnecting = false;
-    }
-  }
-
-  return mongoClient.db(DB_NAME);
 }
 
 async function readJson(fileName, fallback) {
@@ -220,19 +78,7 @@ async function readJson(fileName, fallback) {
 }
 
 async function loadQuestions() {
-  const localQuestions = await loadLocalQuestionCorpus();
-  const db = await getDatabase();
-  if (db) {
-    const dbQuestions = (await readQuestionDocs(db))
-      .map(normalizeQuestionDoc)
-      .filter(isSearchCorpusQuestion);
-
-    if (dbQuestions.length > 0) {
-      return mergeQuestionCorpus(localQuestions, dbQuestions);
-    }
-  }
-
-  return localQuestions;
+  return loadLocalQuestionCorpus();
 }
 
 async function loadLocalQuestionCorpus() {
@@ -255,15 +101,6 @@ function mergeQuestionCorpus(primaryQuestions, extraQuestions) {
 }
 
 async function loadTopics() {
-  const db = await getDatabase();
-  if (db) {
-    const topicSets = await Promise.all(
-      COLLECTION_NAMES.map((collectionName) => db.collection(collectionName).distinct("tag"))
-    );
-    const topics = [...new Set(topicSets.flat())].filter(Boolean).sort();
-    if (topics.length > 0) return topics;
-  }
-
   if (!cache.topics) {
     const data = await readJson("topics.json", []);
     cache.topics = Array.isArray(data) ? data : data.topics || [];
@@ -298,47 +135,7 @@ function sortDocsByCreatedAt(docs) {
   });
 }
 
-async function readQuestionDocs(db, filter = {}) {
-  const docsByKey = new Map();
-  const collections = COLLECTION_NAMES.length ? COLLECTION_NAMES : ["submissions"];
-
-  for (const collectionName of collections) {
-    const docs = await db.collection(collectionName).find(filter).toArray();
-    for (const doc of docs) {
-      const key = doc.id || String(doc._id) || `${doc.text || ""}-${doc.createdAt || ""}`;
-      if (!docsByKey.has(key)) docsByKey.set(key, doc);
-    }
-  }
-
-  return sortDocsByCreatedAt([...docsByKey.values()]);
-}
-
-async function readSubmissionDocs(db, filter = {}) {
-  const docs = await db.collection(WRITE_COLLECTION).find(filter).toArray();
-  return sortDocsByCreatedAt(docs);
-}
-
-async function deleteSubmissionDoc(id) {
-  const db = await getDatabase();
-  if (!db) {
-    throw new Error("MongoDB is not configured, so saved history cannot be deleted.");
-  }
-
-  const filters = [{ id }];
-  if (ObjectId.isValid(id)) {
-    filters.push({ _id: new ObjectId(id) });
-  }
-
-  const result = await db.collection(WRITE_COLLECTION).deleteOne({ $or: filters });
-  return result.deletedCount > 0;
-}
-
 async function loadUserSubmissions() {
-  const db = await getDatabase();
-  if (db) {
-    return (await readSubmissionDocs(db)).map(normalizeQuestionDoc);
-  }
-
   return [];
 }
 
@@ -964,25 +761,7 @@ function findSimilarQuestions(question, assignedTopic, questions) {
 }
 
 async function saveSubmittedQuestion(question) {
-  const db = await getDatabase();
-  if (!db) {
-    console.warn("MongoDB Atlas is not connected; skipping persistent save for this submission.");
-    return;
-  }
-
-  const doc = {
-    id:               question.id,
-    text:             question.text,
-    tag:              question.tag,
-    userName:         question.userName || "Anonymous",
-    similarQuestions: question.similarQuestions || [],
-    createdAt:        question.createdAt || new Date().toISOString(),
-    source:           "user-submission",
-    searchText:       question.searchText || question.text,
-  };
-
-  await db.collection(WRITE_COLLECTION).insertOne(doc);
-  console.log(`Saved submission to MongoDB: "${doc.text.slice(0, 60)}"`);
+  return question;
 }
 
 async function handleApi(request, response, url) {
@@ -1022,7 +801,6 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/submissions") {
-    // Always read fresh from MongoDB — no cache, no limit cap
     const tag = url.searchParams.get("tag") || null;
     const allDocs = await loadUserSubmissions();
     const docs = tag ? allDocs.filter((item) => item.tag === tag) : allDocs;
@@ -1057,13 +835,7 @@ async function handleApi(request, response, url) {
     }
 
     try {
-      const deleted = await deleteSubmissionDoc(id);
-      if (!deleted) {
-        sendJson(response, 404, { error: "Submission not found." });
-        return;
-      }
-
-      sendJson(response, 200, { success: true, id });
+      sendJson(response, 404, { error: "Submission not found." });
     } catch (err) {
       sendJson(response, 500, { error: err.message || "Failed to delete submission." });
     }
@@ -1075,21 +847,10 @@ async function handleApi(request, response, url) {
     const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "50", 10)));
     const tag   = url.searchParams.get("tag") || null;
 
-    const db = await getDatabase();
-    let docs;
-    let total;
-
-    if (db) {
-      const filter = tag ? { tag } : {};
-      const allDocs = await readSubmissionDocs(db, filter);
-      total = allDocs.length;
-      docs = allDocs.slice(page * limit, page * limit + limit);
-    } else {
-      const allDocs = await loadUserSubmissions();
-      const filteredDocs = tag ? allDocs.filter((item) => item.tag === tag) : allDocs;
-      total = filteredDocs.length;
-      docs = filteredDocs.slice(page * limit, page * limit + limit);
-    }
+    const allDocs = await loadUserSubmissions();
+    const filteredDocs = tag ? allDocs.filter((item) => item.tag === tag) : allDocs;
+    const total = filteredDocs.length;
+    const docs = filteredDocs.slice(page * limit, page * limit + limit);
 
     const questions = docs.map((q) => ({
       id: q.id || String(q._id),
@@ -1127,7 +888,6 @@ async function handleApi(request, response, url) {
         similarQuestions,
       };
 
-      // Save to MongoDB
       await saveSubmittedQuestion(newQuestion);
 
       sendJson(response, 200, {
@@ -1195,50 +955,8 @@ server.on("error", (err) => {
 async function startServer() {
   server.listen(PORT, HOST, () => {
     console.log(`Question Finder backend running at http://${HOST}:${PORT}`);
-    if (USE_MONGODB) {
-      console.log("   MongoDB check is running in the background...");
-    } else {
-      console.log("   ⚠️  MongoDB not configured. Using local JSON storage.");
-    }
+    console.log("   Using local JSON question data.");
   });
-
-  if (!USE_MONGODB) {
-    console.log("\n📝 Running in LOCAL MODE (no MongoDB)");
-    console.log("   • Questions stored in: backend/db-store.json");
-    console.log("   • Data persists between restarts");
-    console.log("   • To enable MongoDB: Update MONGODB_URI in .env\n");
-    return;
-  }
-
-  // Try to connect to MongoDB in background
-  try {
-    const db = await getDatabase();
-    if (!db) {
-      console.log("\n⚠️  MongoDB Atlas connection failed (using local storage as fallback)");
-      console.log("   To fix: Verify DNS and network connectivity");
-      console.log("   • Run: nslookup questionfinder.r6hp7fi.mongodb.net");
-      console.log("   • Check: ipconfig /all\n");
-      return;
-    }
-    console.log("✅ MongoDB connection successful (MongoDB Atlas).");
-    const count = (await readSubmissionDocs(db)).length;
-    console.log(`   Total visible submissions in database: ${count}`);
-  } catch (err) {
-    mongoUnavailableReason = err.message;
-    console.log("\n⚠️  MongoDB Atlas connection failed (using local storage as fallback)");
-    if (err.message?.includes("ENOTFOUND")) {
-      console.warn("   Error: DNS resolution failed");
-      console.warn("   • Your network cannot resolve mongodb.net domains");
-      console.warn("   • The app will work with local JSON storage");
-      console.warn("   • To fix DNS:");
-      console.warn("     1. Run: ipconfig /flushdns");
-      console.warn("     2. Run: ipconfig /release && ipconfig /renew");
-      console.warn("     3. Try different network or restart your computer");
-    } else {
-      console.warn(`   ${err.message}`);
-    }
-    console.log("   📝 Using local JSON storage for now...\n");
-  }
 }
 
 startServer();

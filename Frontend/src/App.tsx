@@ -135,7 +135,7 @@ export default function App() {
     if (user) setHashRoute(tab);
   };
 
-  // Load submitted questions from MongoDB in real time
+  // Load submitted questions from the backend.
   useEffect(() => {
     if (!user) return;
 
@@ -699,7 +699,7 @@ export default function App() {
                     <div className="min-h-[112px] lg:min-h-[136px] p-4 sm:p-5 bg-indigo-50 rounded-2xl border border-indigo-100 flex flex-col justify-center">
                       <div className="text-xs font-bold text-slate-700">Saved Questions</div>
                       <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-3">{history.length}</div>
-                      <div className="text-xs text-slate-500 mt-2">Synced from MongoDB</div>
+                      <div className="text-xs text-slate-500 mt-2">Synced from backend</div>
                     </div>
 
                     <div className="min-h-[112px] lg:min-h-[136px] p-4 sm:p-5 bg-white rounded-2xl border border-slate-100 flex flex-col justify-center">
@@ -771,7 +771,7 @@ export default function App() {
                             <PlusCircle className="w-10 h-10 text-slate-200 mx-auto mb-3" />
                             <p className="text-sm text-slate-500 font-semibold">No submissions yet</p>
                             <p className="text-xs text-slate-400 mt-1 max-w-[260px] mx-auto leading-relaxed">
-                              Submit a question above — it will be saved to MongoDB and appear here instantly.
+                              Submit a question above to see it appear here.
                             </p>
                           </div>
                         ) : filteredHistory.length === 0 ? (
@@ -1139,7 +1139,7 @@ export default function App() {
                 <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center">
                   <HelpCircle className="w-8 h-8 text-slate-300 mx-auto mb-3" />
                   <p className="text-sm font-semibold text-slate-500">No saved suggestions for this older question.</p>
-                  <p className="text-xs text-slate-400 mt-1">New questions will save their suggested matches in MongoDB.</p>
+                  <p className="text-xs text-slate-400 mt-1">New questions will keep their suggested matches ready for review.</p>
                 </div>
               )}
             </div>

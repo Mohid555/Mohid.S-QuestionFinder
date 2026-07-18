@@ -10,7 +10,7 @@
 
 # ── STEP 0: Install required libraries ───────────────────────
 # Run this in terminal before running this script:
-# pip install sentence-transformers datasets scikit-learn numpy pymongo python-dotenv
+# pip install sentence-transformers datasets scikit-learn numpy python-dotenv
 
 import json
 import random
@@ -23,7 +23,6 @@ from datetime import datetime, timedelta
 from datasets import load_dataset
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
-from pymongo import MongoClient
 from dotenv import load_dotenv
 
 # Fix Windows console encoding for Unicode characters
@@ -39,12 +38,6 @@ PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
 
 # Load environment variables from the repo root .env file.
 load_dotenv(os.path.join(PROJECT_ROOT, ".env"))
-
-# MongoDB Atlas Configuration
-MONGODB_URI = os.getenv('MONGODB_URI', '')
-MONGODB_DB = os.getenv('MONGODB_DB', 'questionfinder')
-MONGODB_COLLECTION = os.getenv('MONGODB_COLLECTIONS', 'questions').split(',')[1] if ',' in os.getenv('MONGODB_COLLECTIONS', 'submissions,questions') else 'questions'
-USE_MONGODB = MONGODB_URI and '<' not in MONGODB_URI  # Check if configured (not placeholder)
 
 # Paths to generated data files.
 PUBLIC_DIR = os.path.join(SCRIPT_DIR, "public")
@@ -171,70 +164,6 @@ INDIA_GK_ALIASES = {
     "father of indian constitution": ["b r ambedkar", "babasaheb ambedkar"],
     "netaji": ["subhas chandra bose", "subhash chandra bose"],
 }
-
-
-# ============================================================
-#   MongoDB Atlas Helper Functions
-# ============================================================
-
-def connect_to_mongodb():
-    """Connect to MongoDB Atlas using credentials from .env file."""
-    if not USE_MONGODB:
-        print("⚠️  MongoDB Atlas not configured. Skipping MongoDB upload.")
-        return None
-    
-    try:
-        print("🔌 Connecting to MongoDB Atlas...")
-        client = MongoClient(MONGODB_URI, serverSelectionTimeoutMS=10000)
-        client.admin.command('ping')
-        print("✅ Connected to MongoDB Atlas successfully!")
-        return client
-    except Exception as e:
-        print(f"❌ Failed to connect to MongoDB Atlas: {e}")
-        print("   Check your MONGODB_URI in .env file and network connectivity.")
-        return None
-
-
-def save_questions_to_mongodb(questions):
-    """Save questions to MongoDB Atlas."""
-    if not USE_MONGODB:
-        print("⚠️  MongoDB saving skipped (not configured).")
-        return
-    
-    client = connect_to_mongodb()
-    if not client:
-        return
-    
-    try:
-        db = client[MONGODB_DB]
-        collection = db[MONGODB_COLLECTION]
-        
-        # Clear existing seed questions (keep user submissions)
-        collection.delete_many({"source": {"$ne": "user-submission"}})
-        
-        # Prepare documents with required fields
-        documents = []
-        for q in questions:
-            doc = {
-                "id": q.get("id", f"seed-{uuid.uuid4()}"),
-                "text": q.get("text"),
-                "tag": q.get("tag"),
-                "userName": "Question Finder",
-                "createdAt": q.get("createdAt", datetime.utcnow().isoformat() + "Z"),
-                "source": "seed-data",
-                "searchText": q.get("searchText", q.get("text", "")),
-                "similarQuestions": []
-            }
-            documents.append(doc)
-        
-        if documents:
-            result = collection.insert_many(documents, ordered=False)
-            print(f"✅ Saved {len(result.inserted_ids)} questions to MongoDB Atlas")
-        
-    except Exception as e:
-        print(f"❌ Error saving to MongoDB: {e}")
-    finally:
-        client.close()
 
 
 def build_india_gk_questions():
@@ -1888,12 +1817,6 @@ print(f"     -> {len(frontend_questions)} questions loaded for frontend")
 with open(DB_STORE_PATH, "w", encoding="utf-8") as f:
     json.dump(db_store, f, ensure_ascii=False, indent=2)
 print(f"  [OK] Saved: {DB_STORE_PATH}")
-
-# Save questions to MongoDB Atlas
-print("\n" + "=" * 60)
-print("  UPLOADING TO MONGODB ATLAS")
-print("=" * 60)
-save_questions_to_mongodb(frontend_questions)
 
 # Save the similarity map (index-based, frontend maps via question order)
 # Include question ID mapping so frontend can look up by ID
