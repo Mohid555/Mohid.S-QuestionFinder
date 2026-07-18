@@ -74,6 +74,11 @@ jobs:
             tar -xzf /tmp/questionfinder-release.tar.gz -C "$APP_DIR"
             cd "$APP_DIR"
 
+            if [ -z "${{ secrets.DATABASE_URL }}" ]; then
+              echo "DATABASE_URL GitHub secret is missing or empty."
+              exit 1
+            fi
+
             cat > .env << 'ENVEOF'
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           PG_TABLE_NAME=${{ secrets.PG_TABLE_NAME || 'question_submissions' }}
@@ -119,15 +124,21 @@ jobs:
             sudo systemctl daemon-reload
             sudo systemctl enable "$APP_NAME"
             sudo systemctl restart "$APP_NAME"
-            sleep 5
 
-            if ! sudo systemctl is-active --quiet "$APP_NAME"; then
-              sudo systemctl status "$APP_NAME" --no-pager
-              sudo journalctl -u "$APP_NAME" -n 100 --no-pager
-              exit 1
-            fi
+            HEALTH_URL="http://127.0.0.1:${{ secrets.PORT || '5000' }}/api/health"
+            for attempt in 1 2 3 4 5 6 7 8 9 10; do
+              if curl -fsS "$HEALTH_URL"; then
+                break
+              fi
 
-            curl -fsS "http://127.0.0.1:${{ secrets.PORT || '5000' }}/api/health"
+              if [ "$attempt" = "10" ]; then
+                sudo systemctl status "$APP_NAME" --no-pager --full || true
+                sudo journalctl -u "$APP_NAME" -n 150 --no-pager || true
+                exit 1
+              fi
+
+              sleep 2
+            done
 
             if ! command -v nginx >/dev/null 2>&1; then
               sudo apt-get update
