@@ -15,7 +15,8 @@ Use Link --> questionfindermohid.netlify.app
 ## Tech Stack
 
 - **Frontend:** React 19, TypeScript, Vite, Tailwind CSS
-- **Backend:** Node.js HTTP API
+- **Backend:** Node.js HTTP API with PostgreSQL persistence
+- **Database:** PostgreSQL (`pg` driver)
 - **AI / ML Search:** Topic classification, BM25 text ranking, and precomputed semantic similarity data
 - **Icons / UI:** Lucide React
 - **Optional data preparation:** Python, sentence-transformers, NumPy, scikit-learn
@@ -36,16 +37,32 @@ cd similar-study-question-finder
 npm install
 ```
 
-### 3. Start the Backend
+### 3. Configure PostgreSQL
+
+Create a PostgreSQL database, then set the connection string in `.env`:
+
+```env
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/questionfinder
+PG_TABLE_NAME=question_submissions
+PG_QUESTIONS_TABLE=question_bank
+PGSSLMODE=disable
+PORT=5000
+```
+
+For hosted PostgreSQL providers that require SSL, use:
+
+```env
+PGSSLMODE=require
+```
+
+The backend creates the `question_submissions` and `question_bank` tables automatically. On first startup it seeds `question_bank` from `backend/db-store.json`.
+
+### 4. Start the Backend
 
 Open one terminal and run:
 
 ```bash
-
-cd .\backend\ 
-
 npm run server
-
 ```
 
 Backend URL:
@@ -60,16 +77,12 @@ Health check:
 http://localhost:5000/api/health
 ```
 
-### 4. Start the Frontend
+### 5. Start the Frontend
 
 Open a second terminal and run:
 
 ```bash
-
- cd .\Frontend\
-
 npm run dev
-
 ```
 
 Frontend URL:
@@ -78,7 +91,7 @@ Frontend URL:
 http://localhost:5173
 ```
 
-### 5. Login for Demo
+### 6. Login for Demo
 
 Use the demo credentials shown in the app.
 
@@ -125,7 +138,7 @@ Runs TypeScript checking.
 - Topic filter sidebar
 - Question history and previous reports
 - Statistics page for topic distribution
-- Local fallback question database for development
+- PostgreSQL-backed question bank and submission history
 
 ## Project Structure
 
@@ -217,8 +230,9 @@ These files store prepared question data and similarity information. They help t
 When a question is submitted:
 
 1. The backend classifies the subject.
-2. It finds the most similar questions.
-3. The frontend displays the result with match percentages.
+2. It finds the most similar questions from the PostgreSQL-backed question bank.
+3. It saves the submitted question and suggested matches in PostgreSQL.
+4. The frontend displays the result with match percentages.
 
 ## Optional: Regenerate Seed Data
 
@@ -246,3 +260,5 @@ This script prepares study questions and creates embeddings.
 
 **Mohid S**  
 Nandha Engineering College
+
+

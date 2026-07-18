@@ -1,0 +1,93 @@
+name: Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Build and Deploy to EC2
+    runs-on: ubuntu-latest
+
+    env:
+      EC2_HOST: ${{ secrets.EC2_HOST }}
+      EC2_USER: ${{ secrets.EC2_USER }}
+      EC2_PORT: ${{ secrets.EC2_PORT || '22' }}
+      EC2_APP_DIR: ${{ secrets.EC2_APP_DIR || '/var/www/questionfinder' }}
+      APP_NAME: questionfinder
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run type check
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+
+      - name: Prepare deployment bundle
+        run: |
+          mkdir -p release
+          cp -r backend dist package.json package-lock.json server.js release/
+          tar -czf release.tar.gz -C release .
+
+      - name: Configure SSH key
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ec2_key
+          chmod 600 ~/.ssh/ec2_key
+          ssh-keyscan -p "$EC2_PORT" "$EC2_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload bundle to EC2
+        run: |
+          scp -i ~/.ssh/ec2_key -P "$EC2_PORT" release.tar.gz "$EC2_USER@$EC2_HOST:/tmp/questionfinder-release.tar.gz"
+
+      - name: Deploy on EC2
+        run: |
+          ssh -i ~/.ssh/ec2_key -p "$EC2_PORT" "$EC2_USER@$EC2_HOST" << 'EOF'
+            set -e
+            APP_DIR="${{ env.EC2_APP_DIR }}"
+            APP_NAME="${{ env.APP_NAME }}"
+
+            mkdir -p "$APP_DIR"
+            tar -xzf /tmp/questionfinder-release.tar.gz -C "$APP_DIR"
+            cd "$APP_DIR"
+
+            cat > .env << 'ENVEOF'
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          PG_TABLE_NAME=${{ secrets.PG_TABLE_NAME || 'question_submissions' }}
+          PG_QUESTIONS_TABLE=${{ secrets.PG_QUESTIONS_TABLE || 'question_bank' }}
+          PGSSLMODE=${{ secrets.PGSSLMODE || 'require' }}
+          PORT=${{ secrets.PORT || '5000' }}
+          ENVEOF
+
+            npm ci --omit=dev
+
+            if command -v pm2 >/dev/null 2>&1; then
+              pm2 restart "$APP_NAME" || pm2 start backend/server.js --name "$APP_NAME"
+              pm2 save
+            else
+              npm install -g pm2
+              pm2 start backend/server.js --name "$APP_NAME"
+              pm2 save
+            fi
+
+            rm -f /tmp/questionfinder-release.tar.gz
+          EOF

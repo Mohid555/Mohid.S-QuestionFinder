@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import pg from "pg";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const projectRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -27,11 +28,14 @@ try {
 
 const PORT = Number(process.env.PORT || 5000);
 const HOST = process.env.HOST || "0.0.0.0";
+const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL || "";
+const PG_TABLE_NAME = process.env.PG_TABLE_NAME || "question_submissions";
+const PG_QUESTIONS_TABLE = process.env.PG_QUESTIONS_TABLE || "question_bank";
 
 const jsonHeaders = {
   "Content-Type": "application/json",
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+  "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -51,6 +55,164 @@ let cache = {
   questions: null,
   topics: null,
 };
+
+let pgPool = null;
+let dbInitPromise = null;
+
+function getSslConfig() {
+  const mode = String(process.env.PGSSLMODE || "").toLowerCase();
+  if (mode === "disable") return false;
+  if (mode === "require" || mode === "no-verify") return { rejectUnauthorized: false };
+  if (process.env.PGSSL === "true") return { rejectUnauthorized: false };
+  return undefined;
+}
+
+function quoteIdentifier(identifier) {
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(identifier)) {
+    throw new Error(`Invalid PostgreSQL identifier: ${identifier}`);
+  }
+  return `"${identifier}"`;
+}
+
+function getPool() {
+  if (!DATABASE_URL) {
+    throw new Error("DATABASE_URL is required for PostgreSQL storage.");
+  }
+
+  if (!pgPool) {
+    const ssl = getSslConfig();
+    pgPool = new pg.Pool({
+      connectionString: DATABASE_URL,
+      ...(ssl === undefined ? {} : { ssl }),
+    });
+  }
+
+  return pgPool;
+}
+
+async function ensureDatabase() {
+  if (!dbInitPromise) {
+    const submissionsTable = quoteIdentifier(PG_TABLE_NAME);
+    const questionsTable = quoteIdentifier(PG_QUESTIONS_TABLE);
+    const submissionsTagIndex = quoteIdentifier(`${PG_TABLE_NAME}_tag_idx`);
+    const submissionsCreatedIndex = quoteIdentifier(`${PG_TABLE_NAME}_created_at_idx`);
+    const questionsTagIndex = quoteIdentifier(`${PG_QUESTIONS_TABLE}_tag_idx`);
+    const questionsCreatedIndex = quoteIdentifier(`${PG_QUESTIONS_TABLE}_created_at_idx`);
+
+    dbInitPromise = (async () => {
+      const pool = getPool();
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ${submissionsTable} (
+          id TEXT PRIMARY KEY,
+          text TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          user_name TEXT NOT NULL DEFAULT 'Anonymous',
+          similar_questions JSONB NOT NULL DEFAULT '[]'::jsonb,
+          source TEXT NOT NULL DEFAULT 'user-submission',
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS ${questionsTable} (
+          id TEXT PRIMARY KEY,
+          text TEXT NOT NULL,
+          tag TEXT NOT NULL,
+          user_name TEXT NOT NULL DEFAULT 'Question Finder',
+          search_text TEXT,
+          source TEXT NOT NULL DEFAULT 'Academic dataset',
+          similar_questions JSONB NOT NULL DEFAULT '[]'::jsonb,
+          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+        )
+      `);
+      await pool.query(`CREATE INDEX IF NOT EXISTS ${submissionsTagIndex} ON ${submissionsTable} (tag)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS ${submissionsCreatedIndex} ON ${submissionsTable} (created_at DESC)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS ${questionsTagIndex} ON ${questionsTable} (tag)`);
+      await pool.query(`CREATE INDEX IF NOT EXISTS ${questionsCreatedIndex} ON ${questionsTable} (created_at DESC)`);
+      await seedQuestionBankIfEmpty(pool);
+    })();
+  }
+
+  return dbInitPromise;
+}
+
+function toIsoDate(value) {
+  if (!value) return new Date().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  return new Date(value).toISOString();
+}
+
+function mapSubmissionRow(row) {
+  return {
+    id: row.id,
+    text: row.text,
+    tag: row.tag,
+    userName: row.user_name || "Anonymous",
+    similarQuestions: Array.isArray(row.similar_questions) ? row.similar_questions : [],
+    source: row.source || "user-submission",
+    createdAt: toIsoDate(row.created_at),
+  };
+}
+
+function mapQuestionBankRow(row) {
+  return normalizeQuestionDoc({
+    id: row.id,
+    text: row.text,
+    tag: row.tag,
+    userName: row.user_name || "Question Finder",
+    similarQuestions: row.similar_questions,
+    searchText: row.search_text || row.text,
+    source: row.source || "Academic dataset",
+    createdAt: row.created_at,
+  });
+}
+
+async function seedQuestionBankIfEmpty(pool) {
+  if (process.env.PG_SEED_QUESTION_BANK === "false") return;
+
+  const table = quoteIdentifier(PG_QUESTIONS_TABLE);
+  const { rows } = await pool.query(`SELECT COUNT(*)::int AS count FROM ${table}`);
+  if ((rows[0]?.count || 0) > 0) return;
+
+  const store = await readStoreData();
+  const seedQuestions = store.questions
+    .map(normalizeQuestionDoc)
+    .filter((question) => question.text && isSearchCorpusQuestion(question));
+
+  const batchSize = 500;
+  let inserted = 0;
+  for (let i = 0; i < seedQuestions.length; i += batchSize) {
+    const batch = seedQuestions.slice(i, i + batchSize);
+    const values = [];
+    const placeholders = batch.map((question, index) => {
+      const offset = index * 8;
+      values.push(
+        question.id,
+        question.text,
+        question.tag || "General Knowledge",
+        question.userName || "Question Finder",
+        question.searchText || question.text,
+        question.source || "Academic dataset",
+        JSON.stringify(Array.isArray(question.similarQuestions) ? question.similarQuestions : []),
+        question.createdAt || new Date().toISOString(),
+      );
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}::jsonb, $${offset + 8}::timestamptz)`;
+    });
+
+    const result = await pool.query(
+      `
+        INSERT INTO ${table} (id, text, tag, user_name, search_text, source, similar_questions, created_at)
+        VALUES ${placeholders.join(", ")}
+        ON CONFLICT (id) DO NOTHING
+      `,
+      values,
+    );
+    inserted += result.rowCount || 0;
+  }
+
+  console.log(`   Seeded ${inserted} questions into PostgreSQL table "${PG_QUESTIONS_TABLE}".`);
+}
 
 
 async function readStoreData() {
@@ -78,7 +240,22 @@ async function readJson(fileName, fallback) {
 }
 
 async function loadQuestions() {
-  return loadLocalQuestionCorpus();
+  return loadPostgresQuestionCorpus();
+}
+
+async function loadPostgresQuestionCorpus() {
+  if (!cache.questions) {
+    await ensureDatabase();
+    const table = quoteIdentifier(PG_QUESTIONS_TABLE);
+    const { rows } = await getPool().query(`
+      SELECT id, text, tag, user_name, search_text, source, similar_questions, created_at
+      FROM ${table}
+      ORDER BY created_at DESC
+    `);
+    cache.questions = rows.map(mapQuestionBankRow).filter(isSearchCorpusQuestion);
+  }
+
+  return cache.questions;
 }
 
 async function loadLocalQuestionCorpus() {
@@ -136,7 +313,14 @@ function sortDocsByCreatedAt(docs) {
 }
 
 async function loadUserSubmissions() {
-  return [];
+  await ensureDatabase();
+  const table = quoteIdentifier(PG_TABLE_NAME);
+  const { rows } = await getPool().query(`
+    SELECT id, text, tag, user_name, similar_questions, source, created_at
+    FROM ${table}
+    ORDER BY created_at DESC
+  `);
+  return rows.map(mapSubmissionRow);
 }
 
 function sendJson(response, statusCode, body) {
@@ -761,7 +945,41 @@ function findSimilarQuestions(question, assignedTopic, questions) {
 }
 
 async function saveSubmittedQuestion(question) {
-  return question;
+  await ensureDatabase();
+  const table = quoteIdentifier(PG_TABLE_NAME);
+  const createdAt = question.createdAt || new Date().toISOString();
+  const similarQuestions = Array.isArray(question.similarQuestions) ? question.similarQuestions : [];
+  const { rows } = await getPool().query(
+    `
+      INSERT INTO ${table} (id, text, tag, user_name, similar_questions, source, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7::timestamptz, NOW())
+      ON CONFLICT (id) DO UPDATE SET
+        text = EXCLUDED.text,
+        tag = EXCLUDED.tag,
+        user_name = EXCLUDED.user_name,
+        similar_questions = EXCLUDED.similar_questions,
+        source = EXCLUDED.source,
+        updated_at = NOW()
+      RETURNING id, text, tag, user_name, similar_questions, source, created_at
+    `,
+    [
+      question.id,
+      question.text,
+      question.tag,
+      question.userName || "Anonymous",
+      JSON.stringify(similarQuestions),
+      question.source || "user-submission",
+      createdAt,
+    ],
+  );
+  return mapSubmissionRow(rows[0]);
+}
+
+async function deleteSubmittedQuestion(id) {
+  await ensureDatabase();
+  const table = quoteIdentifier(PG_TABLE_NAME);
+  const { rowCount } = await getPool().query(`DELETE FROM ${table} WHERE id = $1`, [id]);
+  return rowCount > 0;
 }
 
 async function handleApi(request, response, url) {
@@ -835,7 +1053,12 @@ async function handleApi(request, response, url) {
     }
 
     try {
-      sendJson(response, 404, { error: "Submission not found." });
+      const deleted = await deleteSubmittedQuestion(id);
+      if (!deleted) {
+        sendJson(response, 404, { error: "Submission not found." });
+        return;
+      }
+      sendJson(response, 200, { success: true });
     } catch (err) {
       sendJson(response, 500, { error: err.message || "Failed to delete submission." });
     }
@@ -953,10 +1176,19 @@ server.on("error", (err) => {
 });
 
 async function startServer() {
+  try {
+    await ensureDatabase();
+  } catch (err) {
+    console.error("PostgreSQL startup error:", err.message);
+    process.exit(1);
+  }
+
   server.listen(PORT, HOST, () => {
     console.log(`Question Finder backend running at http://${HOST}:${PORT}`);
-    console.log("   Using local JSON question data.");
+    console.log(`   Using PostgreSQL table "${PG_TABLE_NAME}" for submissions.`);
+    console.log(`   Using PostgreSQL table "${PG_QUESTIONS_TABLE}" for similarity search.`);
   });
 }
 
 startServer();
+
