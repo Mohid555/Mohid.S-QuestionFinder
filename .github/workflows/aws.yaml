@@ -69,6 +69,7 @@ jobs:
 
             sudo mkdir -p "$APP_DIR"
             sudo chown -R "$USER:$USER" "$APP_DIR"
+            sudo systemctl stop "$APP_NAME" 2>/dev/null || true
             rm -rf "$APP_DIR/backend" "$APP_DIR/dist" "$APP_DIR/node_modules"
             rm -f "$APP_DIR/package.json" "$APP_DIR/package-lock.json" "$APP_DIR/server.js"
             tar -xzf /tmp/questionfinder-release.tar.gz -C "$APP_DIR"
@@ -83,7 +84,7 @@ jobs:
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           PG_TABLE_NAME=${{ secrets.PG_TABLE_NAME || 'question_submissions' }}
           PG_QUESTIONS_TABLE=${{ secrets.PG_QUESTIONS_TABLE || 'question_bank' }}
-          PGSSLMODE=${{ secrets.PGSSLMODE || 'require' }}
+          PGSSLMODE=${{ secrets.PGSSLMODE || 'disable' }}
           PORT=${{ secrets.PORT || '5000' }}
           ENVEOF
 
@@ -96,11 +97,83 @@ jobs:
 
             node --version
             npm --version
+            NODE_BIN="$(command -v node)"
 
             npm ci --omit=dev
+            npm ls pg --omit=dev
 
             sudo apt-get update
             sudo apt-get install -y curl ca-certificates
+
+            node --input-type=module << 'NODEEOF'
+              import { readFileSync, writeFileSync } from 'node:fs';
+              const env = Object.fromEntries(
+                readFileSync('.env', 'utf8')
+                  .split(/\r?\n/)
+                  .filter((line) => line.trim() && !line.trim().startsWith('#'))
+                  .map((line) => {
+                    const index = line.indexOf('=');
+                    return [line.slice(0, index), line.slice(index + 1)];
+                  })
+              );
+              const url = new URL(env.DATABASE_URL);
+              const quoteIdent = (value) => '\"' + value.replace(/\"/g, '\"\"') + '\"';
+              const quoteLiteral = (value) => '\'' + value.replace(/'/g, "''") + '\'';
+              const user = decodeURIComponent(url.username);
+              const password = decodeURIComponent(url.password);
+              const database = decodeURIComponent(url.pathname.slice(1));
+              writeFileSync('/tmp/questionfinder-pg-host', url.hostname + '\n');
+              writeFileSync('/tmp/questionfinder-db.sql', [
+                'DO $$',
+                'BEGIN',
+                '  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = ' + quoteLiteral(user) + ') THEN',
+                '    CREATE ROLE ' + quoteIdent(user) + ' LOGIN PASSWORD ' + quoteLiteral(password) + ';',
+                '  ELSE',
+                '    ALTER ROLE ' + quoteIdent(user) + ' WITH LOGIN PASSWORD ' + quoteLiteral(password) + ';',
+                '  END IF;',
+                'END',
+                '$$;',
+                'SELECT ' + quoteLiteral('CREATE DATABASE ' + quoteIdent(database) + ' OWNER ' + quoteIdent(user)) + ' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = ' + quoteLiteral(database) + ')\\gexec',
+                'GRANT ALL PRIVILEGES ON DATABASE ' + quoteIdent(database) + ' TO ' + quoteIdent(user) + ';',
+              ].join('\n') + '\n');
+          NODEEOF
+
+            PG_HOST="$(cat /tmp/questionfinder-pg-host)"
+            if [ "$PG_HOST" = "localhost" ] || [ "$PG_HOST" = "127.0.0.1" ]; then
+              sudo apt-get install -y postgresql postgresql-client
+              sudo systemctl enable --now postgresql
+              sudo -u postgres psql -v ON_ERROR_STOP=1 -f /tmp/questionfinder-db.sql
+            fi
+
+            node --input-type=module << 'NODEEOF'
+              import { readFileSync } from 'node:fs';
+              import pg from 'pg';
+              const env = Object.fromEntries(
+                readFileSync('.env', 'utf8')
+                  .split(/\r?\n/)
+                  .filter((line) => line.trim() && !line.trim().startsWith('#'))
+                  .map((line) => {
+                    const index = line.indexOf('=');
+                    return [line.slice(0, index), line.slice(index + 1)];
+                  })
+              );
+              const url = new URL(env.DATABASE_URL);
+              console.log('Checking PostgreSQL connection:', {
+                user: url.username,
+                host: url.hostname,
+                port: url.port || '5432',
+                database: url.pathname.slice(1),
+              });
+              const sslMode = String(env.PGSSLMODE || '').toLowerCase();
+              const ssl = sslMode === 'disable' ? false : { rejectUnauthorized: false };
+              const pool = new pg.Pool({ connectionString: env.DATABASE_URL, ssl });
+              try {
+                await pool.query('SELECT 1');
+                console.log('PostgreSQL connection OK');
+              } finally {
+                await pool.end();
+              }
+          NODEEOF
 
             sudo tee "/etc/systemd/system/$APP_NAME.service" >/dev/null << SERVICEEOF
           [Unit]
@@ -113,7 +186,7 @@ jobs:
           WorkingDirectory=$APP_DIR
           EnvironmentFile=$APP_DIR/.env
           Environment=NODE_ENV=production
-          ExecStart=/usr/bin/node $APP_DIR/server.js
+          ExecStart=$NODE_BIN $APP_DIR/server.js
           Restart=always
           RestartSec=5
 
