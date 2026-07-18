@@ -79,6 +79,16 @@ jobs:
           PORT=${{ secrets.PORT || '5000' }}
           ENVEOF
 
+            if ! command -v npm >/dev/null 2>&1; then
+              sudo apt-get update
+              sudo apt-get install -y curl ca-certificates
+              curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+              sudo apt-get install -y nodejs
+            fi
+
+            node --version
+            npm --version
+
             npm ci --omit=dev
 
             if command -v pm2 >/dev/null 2>&1; then
@@ -92,5 +102,6 @@ jobs:
 
             rm -f /tmp/questionfinder-release.tar.gz
           EOF
+
 
 
