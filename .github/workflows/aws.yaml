@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -66,7 +66,8 @@ jobs:
             APP_DIR="${{ env.EC2_APP_DIR }}"
             APP_NAME="${{ env.APP_NAME }}"
 
-            mkdir -p "$APP_DIR"
+            sudo mkdir -p "$APP_DIR"
+            sudo chown -R "$USER:$USER" "$APP_DIR"
             tar -xzf /tmp/questionfinder-release.tar.gz -C "$APP_DIR"
             cd "$APP_DIR"
 
@@ -84,10 +85,12 @@ jobs:
               pm2 restart "$APP_NAME" || pm2 start backend/server.js --name "$APP_NAME"
               pm2 save
             else
-              npm install -g pm2
+              sudo npm install -g pm2
               pm2 start backend/server.js --name "$APP_NAME"
               pm2 save
             fi
 
             rm -f /tmp/questionfinder-release.tar.gz
           EOF
+
+
