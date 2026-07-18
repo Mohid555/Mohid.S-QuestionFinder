@@ -90,18 +90,29 @@ jobs:
 
             npm ci --omit=dev
 
-            if ! command -v pm2 >/dev/null 2>&1; then
-              sudo npm install -g pm2
-            fi
+            sudo tee "/etc/systemd/system/$APP_NAME.service" >/dev/null << SERVICEEOF
+          [Unit]
+          Description=Question Finder backend
+          After=network.target
 
-            if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-              pm2 restart "$APP_NAME" --update-env
-            else
-              pm2 start backend/server.js --name "$APP_NAME"
-            fi
+          [Service]
+          Type=simple
+          User=$USER
+          WorkingDirectory=$APP_DIR
+          EnvironmentFile=$APP_DIR/.env
+          ExecStart=/usr/bin/node backend/server.js
+          Restart=always
+          RestartSec=5
 
-            pm2 save
+          [Install]
+          WantedBy=multi-user.target
+          SERVICEEOF
+
+            sudo systemctl daemon-reload
+            sudo systemctl enable "$APP_NAME"
+            sudo systemctl restart "$APP_NAME"
             sleep 3
+            sudo systemctl --no-pager --full status "$APP_NAME"
             node -e "fetch('http://127.0.0.1:${{ secrets.PORT || '5000' }}/api/health').then(r => { if (!r.ok) process.exit(1); return r.text(); }).then(console.log)"
 
             if ! command -v nginx >/dev/null 2>&1; then
